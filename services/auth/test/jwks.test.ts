@@ -1,24 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.js';
 import { resolveSigningKeys } from '../src/keys.js';
-import type { Config } from '../src/config.js';
-
-const CONFIG: Config = {
-  PORT: 3000,
-  PGHOST: 'db',
-  PGPORT: 5432,
-  PGUSER: 'iiot',
-  PGPASSWORD: 'secret',
-  PGDATABASE: 'iiot',
-  AUTH_ADMIN_EMAIL: 'admin@example.com',
-  AUTH_ADMIN_PASSWORD: 'password123',
-  AUTH_JWT_KEYS_DIR: '/keys',
-};
+import { createInMemoryRepo, makeAdminUser, makeConfig } from './helpers.js';
 
 describe('buildApp routes', () => {
   it('serves /health', async () => {
     const keys = await resolveSigningKeys({ keysDir: '/tmp/nonexistent-keys-xyz' });
-    const app = buildApp({ config: CONFIG, keys });
+    const app = buildApp({
+      config: makeConfig(),
+      keys,
+      repo: createInMemoryRepo([makeAdminUser()]),
+    });
     const res = await app.inject({ method: 'GET', url: '/health' });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ status: 'ok' });
@@ -27,7 +19,11 @@ describe('buildApp routes', () => {
 
   it('serves an Ed25519 JWK at /auth/jwks', async () => {
     const keys = await resolveSigningKeys({ keysDir: '/tmp/nonexistent-keys-xyz' });
-    const app = buildApp({ config: CONFIG, keys });
+    const app = buildApp({
+      config: makeConfig(),
+      keys,
+      repo: createInMemoryRepo([makeAdminUser()]),
+    });
     const res = await app.inject({ method: 'GET', url: '/auth/jwks' });
     expect(res.statusCode).toBe(200);
     const body = res.json();

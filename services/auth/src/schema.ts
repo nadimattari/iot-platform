@@ -12,11 +12,17 @@ CREATE TABLE IF NOT EXISTS auth.users (
 CREATE TABLE IF NOT EXISTS auth.refresh_tokens (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id    UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    family_id  UUID NOT NULL,
     token_hash TEXT NOT NULL UNIQUE,
     expires_at TIMESTAMPTZ NOT NULL,
     revoked_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE auth.refresh_tokens ADD COLUMN IF NOT EXISTS family_id UUID;
+
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_family
+    ON auth.refresh_tokens (family_id);
 `;
 
 export async function migrate(pool: {

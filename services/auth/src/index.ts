@@ -4,6 +4,7 @@ import { resolveSigningKeys } from './keys.js';
 import { migrate } from './schema.js';
 import { seedAdmin } from './seed.js';
 import { buildApp } from './app.js';
+import { PgAuthRepo } from './services/auth-repo.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -22,7 +23,7 @@ async function main(): Promise<void> {
     password: config.AUTH_ADMIN_PASSWORD,
   });
 
-  const app = buildApp({ config, keys });
+  const app = buildApp({ config, keys, repo: new PgAuthRepo(pool) });
   await app.listen({ host: '0.0.0.0', port: config.PORT });
 }
 

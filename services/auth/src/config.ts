@@ -12,6 +12,8 @@ const envSchema = z.object({
   AUTH_JWT_KEYS_DIR: z.string().min(1).default('/keys'),
   AUTH_JWT_PRIVATE_KEY: z.string().optional(),
   AUTH_JWT_PUBLIC_KEY: z.string().optional(),
+  AUTH_ACCESS_TTL_MINUTES: z.coerce.number().int().positive().default(15),
+  AUTH_REFRESH_DAYS: z.coerce.number().int().positive().default(30),
 });
 
 export type Config = z.infer<typeof envSchema>;
