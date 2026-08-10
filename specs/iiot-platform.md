@@ -1,4 +1,4 @@
-# Spec: Self-hosted IIoT Platform (Beaver-IoT-style)
+# Spec: Self-hosted IIoT Platform
 
 ## Objective
 

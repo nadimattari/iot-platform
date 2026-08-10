@@ -2,7 +2,7 @@
 
 ## Overview
 
-Deliver a single-tenant IIoT platform (Beaver-IoT-style) deployed per customer VPS via Docker Compose: MQTT + LoRaWAN
+Deliver a single-tenant IIoT platform deployed per customer VPS via Docker Compose: MQTT + LoRaWAN
 (ChirpStack v4) + Modbus TCP + HTTP ingestion, PostgreSQL + TimescaleDB telemetry, JWT auth, and a Vue 3 + PrimeVue 
 live dashboard. 9 containers behind Caddy + Mercure.
 

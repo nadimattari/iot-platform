@@ -1,7 +1,6 @@
 # Self-hosted IIoT Platform
 
-A single-tenant, self-hosted industrial IoT platform in the style of
-[Beaver IoT](https://github.com/Milesight-IoT/beaver-iot): connect, monitor, and
+A single-tenant, self-hosted industrial IoT platform: connect, monitor, and
 control devices over **MQTT, LoRaWAN, Modbus TCP, and HTTP/REST**, with live
 dashboards, time-series insights, and command/downlink control.
 
