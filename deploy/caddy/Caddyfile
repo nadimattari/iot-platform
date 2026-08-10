@@ -1,0 +1,11 @@
+{
+	# Skeleton Caddyfile.
+	# Full routing (auth, device-mgmt, ChirpStack, dashboard) and the Mercure
+	# hub are added in Task 8. This file only keeps Caddy healthy in the
+	# bootstrap stack.
+}
+
+:80 {
+	respond /healthz 200
+	respond / 200
+}

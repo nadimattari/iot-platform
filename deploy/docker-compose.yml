@@ -1,0 +1,117 @@
+name: iiot-platform
+
+x-app-placeholder: &app-placeholder
+  restart: unless-stopped
+  entrypoint: ["sleep", "infinity"]
+  networks:
+    - frontend
+    - backend
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - frontend
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth:
+    image: node:22-alpine
+    <<: *app-placeholder
+    volumes:
+      - auth_keys:/keys
+
+  device-mgmt:
+    image: dunglas/frankenphp:1-php8.3-alpine
+    <<: *app-placeholder
+    # The image ships a built-in HEALTHCHECK expecting the FrankenPHP server.
+    # Neutralize it while the placeholder runs; a real check lands with Task 5.
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  ingestion:
+    image: python:3.12-alpine
+    <<: *app-placeholder
+
+  db:
+    image: timescale/timescaledb:latest-pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set in deploy/.env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in deploy/.env}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  mqtt:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    volumes:
+      - mqtt_data:/mosquitto/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_pub -h 127.0.0.1 -p 1883 -t 'health' -m 'ok'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  chirpstack:
+    image: chirpstack/chirpstack:4.18.0
+    <<: *app-placeholder
+
+  dashboard:
+    image: nginx:alpine
+    <<: *app-placeholder
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true
+
+volumes:
+  db_data:
+  redis_data:
+  mqtt_data:
+  caddy_data:
+  caddy_config:
+  auth_keys:
