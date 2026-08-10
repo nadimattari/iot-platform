@@ -54,8 +54,11 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set in deploy/.env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in deploy/.env}
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      CHIRPSTACK_DB_USER: ${CHIRPSTACK_DB_USER}
+      CHIRPSTACK_DB_PASSWORD: ${CHIRPSTACK_DB_PASSWORD}
     volumes:
       - db_data:/var/lib/postgresql/data
+      - ../db/init:/docker-entrypoint-initdb.d:ro
     networks:
       - backend
     healthcheck:
