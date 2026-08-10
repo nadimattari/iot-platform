@@ -5,5 +5,7 @@ node_modules/
 !.env.example
 !deploy/.env.example
 *.log
+services/*/dist/
+services/*/coverage/
 .claude/.simplify-ignore-cache/
 .claude/sdd-cache/
