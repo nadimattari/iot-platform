@@ -12,6 +12,7 @@ def test_health_returns_200_without_database():
         pg_port=1,
         pool_min_size=1,
         pool_max_size=1,
+        mqtt_enabled=False,
     )
     with TestClient(create_app(settings)) as client:
         res = client.get("/health")

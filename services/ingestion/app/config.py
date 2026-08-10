@@ -27,9 +27,21 @@ class Settings(BaseSettings):
     pool_min_size: int = 1
     pool_max_size: int = 10
 
-    # --- MQTT broker (used from Task 10) --------------------------------------
-    mqtt_username: str = "ingestion"
-    mqtt_password: str = "change-me"
+    # --- MQTT broker (Task 10) -------------------------------------------------
+    mqtt_enabled: bool = True
+    mqtt_host: str = Field("mqtt", validation_alias=AliasChoices("INGESTION_MQTT_HOST", "MQTT_HOST"))
+    mqtt_port: int = Field(1883, validation_alias=AliasChoices("INGESTION_MQTT_PORT", "MQTT_PORT"))
+    mqtt_username: str = Field(
+        "ingestion", validation_alias=AliasChoices("INGESTION_MQTT_USERNAME", "MQTT_USERNAME")
+    )
+    mqtt_password: str = Field(
+        "change-me", validation_alias=AliasChoices("INGESTION_MQTT_PASSWORD", "MQTT_PASSWORD")
+    )
+
+    # --- writer batching (Task 10) ----------------------------------------------
+    write_batch_size: int = 500
+    write_batch_timeout: float = 0.2
+    write_queue_maxsize: int = 10000
 
     # --- Mercure publisher JWT key (used from Task 10) -------------------------
     mercure_publisher_jwt_key: str = "change-me"

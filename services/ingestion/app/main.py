@@ -1,17 +1,52 @@
 """Ingestion service entrypoint.
 
-FastAPI app exposing `/health` and (from Task 10 onward) the MQTT subscriber
-lifecycle. `create_app` is a factory so tests can inject a `Settings` without
-depending on ambient environment variables.
+Wires together the FastAPI app, the asyncpg pool, the batched writer task and
+the MQTT subscriber (when enabled). `create_app` is a factory so tests can
+inject a `Settings` without a broker or database.
 """
 
-from collections.abc import AsyncIterator
+import asyncio
+import logging
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI
 
 from .config import Settings
 from .db import Database
+from .devices import resolve_device_id
+from .mqtt import MqttSubscriber
+from .normalizer import NormalizeError, Uplink, normalize
+from .writer import Writer
+
+logger = logging.getLogger(__name__)
+
+
+def make_handler(
+    db: Database,
+    writer: Writer,
+) -> Callable[[Any], Awaitable[None]]:
+    """Build the per-message pipeline: normalize -> resolve -> enqueue."""
+
+    async def handler(message: Any) -> None:
+        try:
+            uplink = normalize(message.topic, message.payload)
+        except NormalizeError as exc:
+            logger.warning("quarantining message on %r: %s", message.topic, exc)
+            return
+        if uplink.device_id is None:
+            if not uplink.dev_eui:
+                logger.warning("quarantining message on %r: no device identifier", message.topic)
+                return
+            device_id = await resolve_device_id(db.pool, uplink.dev_eui)
+            if device_id is None:
+                logger.warning("quarantining LoRaWAN uplink: unknown dev_eui %r", uplink.dev_eui)
+                return
+            uplink = uplink.with_device_id(device_id)
+        await writer.put(uplink)
+
+    return handler
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -22,9 +57,30 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         db = Database(settings)
         await db.open()
         app.state.db = db
+
+        writer = Writer(
+            db,
+            batch_size=settings.write_batch_size,
+            batch_timeout=settings.write_batch_timeout,
+            queue_maxsize=settings.write_queue_maxsize,
+        )
+        writer_task = asyncio.create_task(writer.run())
+
+        subscriber_task: asyncio.Task[None] | None = None
+        if settings.mqtt_enabled:
+            subscriber = MqttSubscriber(settings, make_handler(db, writer))
+            subscriber_task = asyncio.create_task(subscriber.run())
+
         try:
             yield
         finally:
+            for task in (subscriber_task, writer_task):
+                if task is not None:
+                    task.cancel()
+            await asyncio.gather(
+                *(t for t in (subscriber_task, writer_task) if t is not None),
+                return_exceptions=True,
+            )
             await db.close()
 
     app = FastAPI(title="iiot ingestion service", version="0.1.0", lifespan=lifespan)

@@ -102,6 +102,8 @@ services:
       PGDATABASE: iiot
       INGESTION_MQTT_USERNAME: ${INGESTION_MQTT_USERNAME:-ingestion}
       INGESTION_MQTT_PASSWORD: ${INGESTION_MQTT_PASSWORD:-change-me}
+      INGESTION_MQTT_HOST: mqtt
+      INGESTION_MQTT_PORT: "1883"
     networks:
       - frontend
       - backend

@@ -9,10 +9,13 @@ topic readwrite #
 user chirpstack
 topic readwrite chirpstack/#
 
-# Ingestion service (Task 10): its own namespace plus all device topics.
+# Ingestion service (Task 10): its own namespace plus all device topics and
+# the LoRaWAN uplink topic (application/<id>/device/<devEui>/event/up).
 user ingestion
 topic readwrite ingest/#
 topic readwrite devices/#
+topic readwrite modbus/#
+topic readwrite application/#
 
 # Device accounts. Username == device id; each device may only publish and
 # subscribe under devices/<device-id>/#.
