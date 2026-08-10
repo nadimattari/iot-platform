@@ -58,7 +58,7 @@ services:
     environment:
       APP_ENV: prod
       APP_SECRET: ${APP_SECRET:?APP_SECRET must be set in deploy/.env}
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/iiot
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/iiot?serverVersion=16&charset=utf8
       DEFAULT_URI: http://localhost
       AUTH_JWKS_URL: ${AUTH_JWKS_URL:-http://auth:3000/auth/jwks}
       AUTH_JWKS_TTL: ${AUTH_JWKS_TTL:-3600}
@@ -78,6 +78,8 @@ services:
   db:
     image: timescale/timescaledb:latest-pg16
     restart: unless-stopped
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set in deploy/.env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in deploy/.env}
@@ -88,6 +90,7 @@ services:
       - db_data:/var/lib/postgresql/data
       - ../db/init:/docker-entrypoint-initdb.d:ro
     networks:
+      - frontend
       - backend
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
