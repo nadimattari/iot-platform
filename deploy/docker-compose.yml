@@ -62,6 +62,10 @@ services:
       DEFAULT_URI: http://localhost
       AUTH_JWKS_URL: ${AUTH_JWKS_URL:-http://auth:3000/auth/jwks}
       AUTH_JWKS_TTL: ${AUTH_JWKS_TTL:-3600}
+      MQTT_PASSWD_FILE: /broker/creds/mosquitto.passwd
+    volumes:
+      # Shared with the mqtt broker so device credentials are provisioned here.
+      - ./mqtt/data:/broker/creds
     networks:
       - backend
     healthcheck:
@@ -114,14 +118,27 @@ services:
       retries: 5
 
   mqtt:
-    image: eclipse-mosquitto:2
+    build: ./mqtt
     restart: unless-stopped
+    entrypoint: ["/docker-entrypoint.sh"]
+    command: ["/mosquitto/entrypoint.sh"]
+    environment:
+      MOSQUITTO_USER: ${MOSQUITTO_USER:-broker}
+      MOSQUITTO_PASSWORD: ${MOSQUITTO_PASSWORD:?MOSQUITTO_PASSWORD must be set in deploy/.env}
+      INGESTION_MQTT_USERNAME: ${INGESTION_MQTT_USERNAME:-ingestion}
+      INGESTION_MQTT_PASSWORD: ${INGESTION_MQTT_PASSWORD:-change-me}
+      CHIRPSTACK_MQTT_USERNAME: ${CHIRPSTACK_MQTT_USERNAME:-chirpstack}
+      CHIRPSTACK_MQTT_PASSWORD: ${CHIRPSTACK_MQTT_PASSWORD:-change-me}
     volumes:
       - mqtt_data:/mosquitto/data
+      - ./mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mqtt/acl:/mosquitto/config/acl
+      - ./mqtt/entrypoint.sh:/mosquitto/entrypoint.sh:ro
+      - ./mqtt/data:/mosquitto/creds
     networks:
       - backend
     healthcheck:
-      test: ["CMD-SHELL", "mosquitto_pub -h 127.0.0.1 -p 1883 -t 'health' -m 'ok'"]
+      test: ["CMD-SHELL", "mosquitto_pub -h 127.0.0.1 -p 1883 -u \"$$MOSQUITTO_USER\" -P \"$$MOSQUITTO_PASSWORD\" -t 'health' -m 'ok'"]
       interval: 10s
       timeout: 5s
       retries: 5

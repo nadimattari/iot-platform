@@ -1,0 +1,19 @@
+# Mosquitto ACLs (Task 7). First matching rule wins, so service accounts come
+# first and the device pattern is the catch-all fallback.
+
+# Broker administration account: full access (used by the healthcheck).
+user broker
+topic readwrite #
+
+# LoRaWAN integration: publishes/subscribes under its own namespace.
+user chirpstack
+topic readwrite chirpstack/#
+
+# Ingestion service (Task 10): its own namespace plus all device topics.
+user ingestion
+topic readwrite ingest/#
+topic readwrite devices/#
+
+# Device accounts. Username == device id; each device may only publish and
+# subscribe under devices/<device-id>/#.
+pattern readwrite devices/%u/#

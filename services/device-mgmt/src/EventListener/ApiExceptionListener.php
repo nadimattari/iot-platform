@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
+use App\Service\BrokerProvisioningException;
 use App\Service\DeviceConflictException;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -21,6 +22,7 @@ final class ApiExceptionListener
         $status = match (true) {
             $exception instanceof NotFoundHttpException => Response::HTTP_NOT_FOUND,
             $exception instanceof DeviceConflictException => Response::HTTP_CONFLICT,
+            $exception instanceof BrokerProvisioningException => Response::HTTP_BAD_GATEWAY,
             $exception instanceof \JsonException => Response::HTTP_BAD_REQUEST,
             $exception instanceof \InvalidArgumentException => Response::HTTP_UNPROCESSABLE_ENTITY,
             default => null,

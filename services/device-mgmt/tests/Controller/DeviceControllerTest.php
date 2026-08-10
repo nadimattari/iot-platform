@@ -14,6 +14,7 @@ final class DeviceControllerTest extends WebTestCase
     use JwtTestTrait;
 
     private KernelBrowser $client;
+    private FakeBrokerCredentialProvisioner $broker;
 
     protected function setUp(): void
     {
@@ -21,6 +22,8 @@ final class DeviceControllerTest extends WebTestCase
         $this->client = self::createClient();
         $this->client->disableReboot();
         self::getContainer()->set('App\Security\JwksProvider', $this->fakeProvider($this->publicKey));
+        $this->broker = new FakeBrokerCredentialProvisioner();
+        self::getContainer()->set('App\Service\BrokerCredentialProvisioner', $this->broker);
 
         $em = self::getContainer()->get(EntityManagerInterface::class);
         $conn = $em->getConnection();
@@ -50,6 +53,17 @@ final class DeviceControllerTest extends WebTestCase
             ->getRepository(\App\Entity\Device::class)
             ->findOneBy(['name' => 'pump-1'])?->getApiKeyHash();
         self::assertSame(hash('sha256', $body['api_key']), $hash);
+
+        self::assertCount(1, $this->broker->provisioned);
+        self::assertSame($body['device']['id'], $this->broker->provisioned[0]['device']->getId());
+        self::assertSame($body['api_key'], $this->broker->provisioned[0]['password']);
+    }
+
+    public function testCreateLoraWanDoesNotProvisionBrokerCredential(): void
+    {
+        $this->createDevice('lora-1', 'lorawan');
+
+        self::assertSame([], $this->broker->provisioned);
     }
 
     public function testCreateRejectsUnknownProtocol(): void
@@ -161,8 +175,21 @@ final class DeviceControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(204);
         self::assertSame('', (string) $this->client->getResponse()->getContent());
 
+        self::assertCount(1, $this->broker->revoked);
+        self::assertSame($id, $this->broker->revoked[0]->getId());
+
         $this->client->request('GET', '/api/v1/devices/'.$id, server: ['HTTP_AUTHORIZATION' => 'Bearer '.$this->token]);
         self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testDeleteLoraWanDoesNotRevokeBrokerCredential(): void
+    {
+        $id = $this->createDevice('lora-1', 'lorawan');
+
+        $this->client->request('DELETE', '/api/v1/devices/'.$id, server: ['HTTP_AUTHORIZATION' => 'Bearer '.$this->token]);
+
+        self::assertResponseStatusCodeSame(204);
+        self::assertSame([], $this->broker->revoked);
     }
 
     public function testClaimLoraWanRequiresDevEui(): void
@@ -238,6 +265,11 @@ final class DeviceControllerTest extends WebTestCase
         $em = self::getContainer()->get(EntityManagerInterface::class);
         $device = $em->getRepository(\App\Entity\Device::class)->find($id);
         self::assertSame(hash('sha256', $body['api_key']), $device?->getApiKeyHash());
+
+        self::assertCount(2, $this->broker->provisioned);
+        $last = $this->broker->provisioned[1];
+        self::assertSame($id, $last['device']->getId());
+        self::assertSame($body['api_key'], $last['password']);
     }
 
     public function testListFiltersByProtocolAndPaginates(): void

@@ -36,6 +36,7 @@ final class DeviceService
         private readonly DeviceRepository $devices,
         private readonly DeviceGroupRepository $groups,
         private readonly ApiKeyGenerator $apiKeys,
+        private readonly BrokerCredentialProvisioner $broker,
     ) {
     }
 
@@ -52,6 +53,7 @@ final class DeviceService
         $apiKey = null;
         if ($protocol->requiresApiKey()) {
             $apiKey = $this->provisionApiKey($device);
+            $this->broker->provision($device, $apiKey);
         }
 
         $this->em->persist($device);
@@ -87,6 +89,9 @@ final class DeviceService
 
     public function delete(Device $device): void
     {
+        if ($device->getProtocol()->requiresApiKey()) {
+            $this->broker->revoke($device);
+        }
         $this->em->remove($device);
         $this->em->flush();
     }
@@ -108,6 +113,7 @@ final class DeviceService
             $device->setDevEui($devEui);
         } else {
             $apiKey = $this->provisionApiKey($device);
+            $this->broker->provision($device, $apiKey);
         }
 
         $this->em->flush();

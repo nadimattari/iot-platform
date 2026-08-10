@@ -9,6 +9,9 @@
 parameters:
     env(AUTH_JWKS_URL): 'http://auth:3000/auth/jwks'
     env(AUTH_JWKS_TTL): '3600'
+    # Path to the shared Mosquitto password file. Empty = no broker configured;
+    # provisioning MQTT device credentials then fails fast (BrokerProvisioningException).
+    env(MQTT_PASSWD_FILE): ''
 
 services:
     # default configuration for services in *this* file
@@ -25,3 +28,9 @@ services:
         arguments:
             $jwksUrl: '%env(AUTH_JWKS_URL)%'
             $ttl: '%env(int:AUTH_JWKS_TTL)%'
+
+    # Autowiring target for DeviceService's BrokerCredentialProvisioner.
+    App\Service\BrokerCredentialProvisioner:
+        class: App\Service\MosquittoCredentialProvisioner
+        arguments:
+            $passwdFile: '%env(MQTT_PASSWD_FILE)%'
