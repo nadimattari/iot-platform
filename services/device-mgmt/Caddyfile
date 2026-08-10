@@ -1,0 +1,12 @@
+{
+	auto_https off
+	frankenphp {
+		worker /app/public/index.php
+	}
+}
+
+:80 {
+	root * /app/public
+	encode zstd br gzip
+	php_server
+}

@@ -1,0 +1,20 @@
+# JWT authentication for the device management API.
+#
+# Stateless EdDSA validation: tokens are verified against the public key
+# exposed by the auth service at AUTH_JWKS_URL (see src/Security/JwksProvider).
+security:
+    providers:
+        jwt:
+            id: App\Security\JwtUserProvider
+
+    firewalls:
+        api:
+            pattern: ^/api/v1
+            stateless: true
+            entry_point: App\Security\JwtEntryPoint
+            custom_authenticators:
+                - App\Security\JwtAuthenticator
+
+    access_control:
+        - { path: ^/api/v1/health, roles: PUBLIC_ACCESS }
+        - { path: ^/api/v1, roles: IS_AUTHENTICATED_FULLY }

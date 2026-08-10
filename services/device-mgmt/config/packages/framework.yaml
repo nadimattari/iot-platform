@@ -5,6 +5,9 @@ framework:
     # Note that the session will be started ONLY if you read or write from it.
     session: true
 
+    # HTTP client used for JWKS discovery (stateless token validation).
+    http_client: ~
+
     #esi: true
     #fragments: true
 

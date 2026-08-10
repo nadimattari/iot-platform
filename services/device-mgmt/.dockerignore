@@ -1,0 +1,10 @@
+vendor
+var/cache
+var/log
+var/share
+.env
+.env.*
+!.env.example
+.git
+tests
+phpunit*.xml*

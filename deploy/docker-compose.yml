@@ -52,15 +52,24 @@ services:
       start_period: 15s
 
   device-mgmt:
-    image: dunglas/frankenphp:1-php8.3-alpine
-    <<: *app-placeholder
-    # The image ships a built-in HEALTHCHECK expecting the FrankenPHP server.
-    # Neutralize it while the placeholder runs; a real check lands with Task 5.
+    build:
+      context: ../services/device-mgmt
+    restart: unless-stopped
+    environment:
+      APP_ENV: prod
+      APP_SECRET: ${APP_SECRET:?APP_SECRET must be set in deploy/.env}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/iiot
+      DEFAULT_URI: http://localhost
+      AUTH_JWKS_URL: ${AUTH_JWKS_URL:-http://auth:3000/auth/jwks}
+      AUTH_JWKS_TTL: ${AUTH_JWKS_TTL:-3600}
+    networks:
+      - backend
     healthcheck:
-      test: ["CMD", "true"]
-      interval: 30s
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/api/v1/health || exit 1"]
+      interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 20s
 
   ingestion:
     image: python:3.12-alpine

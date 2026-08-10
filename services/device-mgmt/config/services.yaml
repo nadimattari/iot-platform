@@ -7,6 +7,8 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    env(AUTH_JWKS_URL): 'http://auth:3000/auth/jwks'
+    env(AUTH_JWKS_TTL): '3600'
 
 services:
     # default configuration for services in *this* file
@@ -19,5 +21,7 @@ services:
     App\:
         resource: '../src/'
 
-    # add more service definitions when explicit configuration is needed
-    # please note that last definitions always *replace* previous ones
+    App\Security\JwksProvider:
+        arguments:
+            $jwksUrl: '%env(AUTH_JWKS_URL)%'
+            $ttl: '%env(int:AUTH_JWKS_TTL)%'
