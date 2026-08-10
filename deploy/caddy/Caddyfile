@@ -1,11 +1,42 @@
-{
-	# Skeleton Caddyfile.
-	# Full routing (auth, device-mgmt, ChirpStack, dashboard) and the Mercure
-	# hub are added in Task 8. This file only keeps Caddy healthy in the
-	# bootstrap stack.
-}
-
-:80 {
+# iiot-platform edge proxy — Caddy with the Mercure module (dunglas/mercure).
+#
+# The site address is driven by the SERVER_NAME env var (docker-compose derives
+# it from DOMAIN): an empty/`:80` value serves plain HTTP for local dev; a real
+# domain triggers automatic HTTPS via Let's Encrypt (Caddy auto-TLS).
+{$SERVER_NAME:localhost} {
+	# Liveness probe for the container healthcheck.
 	respond /healthz 200
-	respond / 200
+
+	# Root redirects to the dashboard so the placeholder is reachable at /
+	# without knowing the path.
+	redir / /dashboard/
+
+	# Auth API (Node service) — full path preserved.
+	handle /auth/* {
+		reverse_proxy auth:3000
+	}
+
+	# Device management API (Symfony) — full path preserved.
+	handle /api/v1/* {
+		reverse_proxy device-mgmt:80
+	}
+
+	# ChirpStack web UI + API. Upstream is a placeholder until Task 14.
+	handle /chirpstack/* {
+		reverse_proxy chirpstack:8080
+	}
+
+	# Dashboard SPA placeholder (real Vue 3 SPA lands in Tasks 21-22).
+	handle_path /dashboard* {
+		root * /srv/dashboard
+		try_files {path} /index.html
+		file_server
+	}
+
+	# Mercure SSE hub: topic ACLs are enforced via the `publish`/`subscribe`
+	# topic-selector claims in publisher/subscriber JWTs (see the hub config).
+	import /etc/caddy/mercure/Caddyfile
+
+	# Fallback for unmapped paths.
+	respond "Not Found" 404
 }

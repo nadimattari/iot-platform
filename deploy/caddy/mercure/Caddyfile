@@ -1,0 +1,22 @@
+# Mercure hub configuration, imported into the main Caddyfile site block.
+# Reference: https://mercure.rocks/docs/hub/config
+#
+# Topic ACLs: the hub requires a valid JWT for every subscriber (no `anonymous`
+# directive), and the `publish`/`subscribe` claims in those JWTs restrict which
+# topics each publisher/subscriber may use (topic selectors). Keys below are
+# injected from the container environment.
+mercure {
+	# Publisher key signs JWTs used by ingestion/device-mgmt to publish events.
+	publisher_jwt {env.MERCURE_PUBLISHER_JWT_KEY}
+	# Subscriber key signs JWTs used by the dashboard to subscribe.
+	subscriber_jwt {env.MERCURE_SUBSCRIBER_JWT_KEY}
+
+	# Heartbeat keeps SSE connections alive through proxies/browsers.
+	heartbeat 30s
+
+	# Bolt transport persists event history so reconnecting subscribers can
+	# replay missed events via Last-Event-ID (mounted volume mercure_data).
+	transport bolt {
+		path /data/mercure/mercure.db
+	}
+}

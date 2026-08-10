@@ -9,22 +9,37 @@ x-app-placeholder: &app-placeholder
 
 services:
   caddy:
-    image: caddy:2-alpine
+    # dunglas/mercure is a Caddy 2 build with the Mercure module included,
+    # so the edge proxy and the SSE hub are hosted in one container.
+    image: dunglas/mercure:v0.24.2
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
+    environment:
+      # Site address for the Caddyfile: ':80' = plain HTTP for local dev,
+      # a real domain = automatic HTTPS via Let's Encrypt.
+      SERVER_NAME: ${DOMAIN:-:80}
+      MERCURE_PUBLISHER_JWT_KEY: ${MERCURE_PUBLISHER_JWT_KEY:?MERCURE_PUBLISHER_JWT_KEY must be set in deploy/.env}
+      MERCURE_SUBSCRIBER_JWT_KEY: ${MERCURE_SUBSCRIBER_JWT_KEY:?MERCURE_SUBSCRIBER_JWT_KEY must be set in deploy/.env}
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/mercure/Caddyfile:/etc/caddy/mercure/Caddyfile:ro
+      - ./caddy/static:/srv/dashboard:ro
       - caddy_data:/data
       - caddy_config:/config
+      - mercure_data:/data/mercure
     networks:
       - frontend
+      - backend
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/healthz"]
+      # Transport-aware: the Mercure module registers a readiness probe on the
+      # Caddy admin API (bound to localhost:2019 inside the container).
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/mercure/health/ready"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
 
   auth:
     build:
@@ -165,4 +180,5 @@ volumes:
   mqtt_data:
   caddy_data:
   caddy_config:
+  mercure_data:
   auth_keys:
