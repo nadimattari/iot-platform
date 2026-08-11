@@ -1,0 +1,13 @@
+# ChirpStack Gateway Bridge (Task 14): bridges Semtech UDP packet-forwarder
+# gateways (UDP 1700) to the shared MQTT broker.
+#
+# The Network Server's gateway backend (region_eu868.toml) subscribes to
+# eu868/gateway/+/event/+ and publishes downlink commands to
+# eu868/gateway/{id}/command/{command}; the bridge connects as the same
+# chirpstack service account. Credentials are injected via $VAR substitution
+# from the container environment (same mechanism as the main ChirpStack config).
+
+[integration.mqtt.auth.generic]
+servers = ["tcp://mqtt:1883"]
+username = "$CHIRPSTACK_MQTT_USERNAME"
+password = "$CHIRPSTACK_MQTT_PASSWORD"

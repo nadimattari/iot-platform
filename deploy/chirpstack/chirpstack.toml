@@ -1,0 +1,55 @@
+# ChirpStack v4 configuration (Task 14).
+#
+# Values are substituted from environment variables injected by the
+# `chirpstack` service in docker-compose.yml (see the ChirpStack config
+# reference: values support $VAR substitution).
+#
+# The region definition lives in region_eu868.toml (same directory; all
+# .toml files under /etc/chirpstack are merged).
+
+[logging]
+level = "info"
+
+# Shared PostgreSQL (TimescaleDB). The `chirpstack` database and role are
+# created by db/init/01-databases.sh; ChirpStack runs its own migrations.
+[postgresql]
+dsn = "postgres://$CHIRPSTACK_DB_USER:$CHIRPSTACK_DB_PASSWORD@db:5432/chirpstack?sslmode=disable"
+max_open_connections = 10
+min_idle_connections = 0
+
+# Shared Redis (the broker has no password locally).
+[redis]
+servers = ["redis://redis:6379/$CHIRPSTACK_REDIS_DB"]
+key_prefix = "chirpstack:"
+cluster = false
+max_open_connections = 100
+
+[network]
+net_id = "000000"
+enabled_regions = ["$CHIRPSTACK_REGION"]
+
+# Web UI + gRPC API. The UI is served at the root (ChirpStack v4 has no
+# sub-path support), so Caddy exposes it on its own hostname (see Caddyfile).
+[api]
+bind = "0.0.0.0:8080"
+secret = "$CHIRPSTACK_API_SECRET"
+
+# Health/metrics endpoint used by the container healthcheck (/health).
+[monitoring]
+bind = "0.0.0.0:8081"
+
+# Application Server MQTT integration. Events are published as JSON to
+# application/{application_id}/device/{dev_eui}/event/{event} — the platform
+# ingestion service subscribes to application/+/device/+/event/up (Task 15).
+[integration]
+enabled = ["mqtt"]
+
+[integration.mqtt]
+event_topic = "application/{{application_id}}/device/{{dev_eui}}/event/{{event}}"
+command_topic = "application/{{application_id}}/device/{{dev_eui}}/command/{{command}}"
+json = true
+server = "tcp://mqtt:1883/"
+username = "$CHIRPSTACK_MQTT_USERNAME"
+password = "$CHIRPSTACK_MQTT_PASSWORD"
+clean_session = false
+share_name = "chirpstack"

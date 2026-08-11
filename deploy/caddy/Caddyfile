@@ -26,11 +26,6 @@
 		reverse_proxy ingestion:8000
 	}
 
-	# ChirpStack web UI + API. Upstream is a placeholder until Task 14.
-	handle /chirpstack/* {
-		reverse_proxy chirpstack:8080
-	}
-
 	# Dashboard SPA placeholder (real Vue 3 SPA lands in Tasks 21-22).
 	handle_path /dashboard* {
 		root * /srv/dashboard
@@ -44,4 +39,12 @@
 
 	# Fallback for unmapped paths.
 	respond "Not Found" 404
+}
+
+# ChirpStack web UI + API (Task 14). ChirpStack v4 has no sub-path support
+# (its UI hard-codes /, /static, /logo, ...), so it gets its own hostname:
+# http://chirpstack.localhost in dev, chirpstack.<domain> in production
+# (override CHIRPSTACK_SITE_ADDR, e.g. https://chirpstack.example.com).
+{$CHIRPSTACK_SITE_ADDR:http://chirpstack.localhost} {
+	reverse_proxy chirpstack:8080
 }

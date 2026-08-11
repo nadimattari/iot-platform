@@ -24,3 +24,15 @@ psql -v ON_ERROR_STOP=1 \
      --dbname "iiot" <<-EOSQL
     CREATE EXTENSION IF NOT EXISTS timescaledb;
 EOSQL
+
+# ChirpStack's diesel migrations require extensions that it does not create
+# itself (see chirpstack/migrations_postgres): pg_trgm (trigram indexes on
+# search columns), hstore and pgcrypto (gen_random_uuid() in migrations).
+psql -v ON_ERROR_STOP=1 \
+     --username "$POSTGRES_USER" \
+     --dbname "chirpstack" <<-EOSQL
+    CREATE EXTENSION IF NOT EXISTS pg_trgm;
+    CREATE EXTENSION IF NOT EXISTS hstore;
+    CREATE EXTENSION IF NOT EXISTS pgcrypto;
+    CREATE EXTENSION IF NOT EXISTS citext;
+EOSQL

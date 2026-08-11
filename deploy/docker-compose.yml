@@ -20,6 +20,7 @@ services:
       # Site address for the Caddyfile: ':80' = plain HTTP for local dev,
       # a real domain = automatic HTTPS via Let's Encrypt.
       SERVER_NAME: ${DOMAIN:-:80}
+      CHIRPSTACK_SITE_ADDR: ${CHIRPSTACK_SITE_ADDR:-http://chirpstack.localhost}
       MERCURE_PUBLISHER_JWT_KEY: ${MERCURE_PUBLISHER_JWT_KEY:?MERCURE_PUBLISHER_JWT_KEY must be set in deploy/.env}
       MERCURE_SUBSCRIBER_JWT_KEY: ${MERCURE_SUBSCRIBER_JWT_KEY:?MERCURE_SUBSCRIBER_JWT_KEY must be set in deploy/.env}
     volumes:
@@ -180,8 +181,86 @@ services:
       start_period: 10s
 
   chirpstack:
+    # LoRaWAN Network Server + Application Server (Task 14). Config directory
+    # contains chirpstack.toml plus region_eu868.toml (all merged on startup).
     image: chirpstack/chirpstack:4.18.0
-    <<: *app-placeholder
+    restart: unless-stopped
+    command: ["-c", "/etc/chirpstack"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mqtt:
+        condition: service_healthy
+    environment:
+      CHIRPSTACK_DB_USER: ${CHIRPSTACK_DB_USER:-chirpstack}
+      CHIRPSTACK_DB_PASSWORD: ${CHIRPSTACK_DB_PASSWORD:?CHIRPSTACK_DB_PASSWORD must be set in deploy/.env}
+      CHIRPSTACK_REDIS_DB: ${CHIRPSTACK_REDIS_DB:-0}
+      CHIRPSTACK_REGION: ${CHIRPSTACK_REGION:-eu868}
+      CHIRPSTACK_MQTT_USERNAME: ${CHIRPSTACK_MQTT_USERNAME:-chirpstack}
+      CHIRPSTACK_MQTT_PASSWORD: ${CHIRPSTACK_MQTT_PASSWORD:?CHIRPSTACK_MQTT_PASSWORD must be set in deploy/.env}
+      CHIRPSTACK_API_SECRET: ${CHIRPSTACK_API_SECRET:?CHIRPSTACK_API_SECRET must be set in deploy/.env}
+    volumes:
+      - ./chirpstack/:/etc/chirpstack/:ro
+    ports:
+      - "8080:8080"
+    networks:
+      - backend
+      - frontend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8081/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  chirpstack-gateway-bridge:
+    # Semtech UDP <-> MQTT bridge for packet-forwarder gateways (UDP 1700).
+    # Topic templates are fixed for the eu868 gateway namespace so they match
+    # the Network Server gateway backend (region_eu868.toml).
+    image: chirpstack/chirpstack-gateway-bridge:4
+    restart: unless-stopped
+    # No command: the default config path is
+    # /etc/chirpstack-gateway-bridge/chirpstack-gateway-bridge.toml (matches
+    # the mount below). Unlike chirpstack, -c expects a file, not a directory.
+    depends_on:
+      mqtt:
+        condition: service_healthy
+    environment:
+      INTEGRATION__MQTT__EVENT_TOPIC_TEMPLATE: "eu868/gateway/{{ .GatewayID }}/event/{{ .EventType }}"
+      INTEGRATION__MQTT__STATE_TOPIC_TEMPLATE: "eu868/gateway/{{ .GatewayID }}/state/{{ .StateType }}"
+      INTEGRATION__MQTT__COMMAND_TOPIC_TEMPLATE: "eu868/gateway/{{ .GatewayID }}/command/#"
+      INTEGRATION__MQTT__AUTH__GENERIC__USERNAME: ${CHIRPSTACK_MQTT_USERNAME:-chirpstack}
+      INTEGRATION__MQTT__AUTH__GENERIC__PASSWORD: ${CHIRPSTACK_MQTT_PASSWORD:?CHIRPSTACK_MQTT_PASSWORD must be set in deploy/.env}
+    volumes:
+      - ./chirpstack/gateway-bridge/:/etc/chirpstack-gateway-bridge/:ro
+    ports:
+      - "1700:1700/udp"
+    # Gateway packet-forwarders must reach UDP 1700 from the LAN, and
+    # published ports are dropped on internal-only networks — so the bridge
+    # is also attached to the (non-internal) frontend network.
+    networks:
+      - backend
+      - frontend
+
+  chirpstack-rest-api:
+    # REST facade over the ChirpStack gRPC API. The platform (device-mgmt)
+    # provisions applications/devices through this endpoint (Tasks 15-17);
+    # --insecure because the gRPC transport to chirpstack:8080 is unencrypted
+    # inside the internal network (see Task 23 hardening).
+    image: chirpstack/chirpstack-rest-api:4
+    restart: unless-stopped
+    command: ["--server", "chirpstack:8080", "--bind", "0.0.0.0:8090", "--insecure"]
+    depends_on:
+      chirpstack:
+        condition: service_healthy
+    ports:
+      - "8090:8090"
+    # Frontend network is required for host port publishing (see gateway-bridge).
+    networks:
+      - backend
+      - frontend
 
   dashboard:
     image: nginx:alpine

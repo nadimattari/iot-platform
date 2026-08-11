@@ -5,9 +5,13 @@
 user broker
 topic readwrite #
 
-# LoRaWAN integration: publishes/subscribes under its own namespace.
+# LoRaWAN stack: the ChirpStack Network Server (gateway backend) and the
+# Application Server MQTT integration use the same service account.
+#   eu868/#        - gateway <-> Network Server frames (via gateway bridge)
+#   application/#  - AS integration events (application/<id>/device/<eui>/event/up)
 user chirpstack
-topic readwrite chirpstack/#
+topic readwrite eu868/#
+topic readwrite application/#
 
 # Ingestion service (Task 10): its own namespace plus all device topics and
 # the LoRaWAN uplink topic (application/<id>/device/<devEui>/event/up).
