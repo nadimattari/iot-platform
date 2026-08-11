@@ -20,7 +20,7 @@ from .schema import ProfileSchema
 logger = logging.getLogger(__name__)
 
 
-def _parse_json(value: object) -> object:
+def parse_json(value: object) -> object:
     """asyncpg returns jsonb columns as str; decode them when needed."""
     if isinstance(value, str):
         try:
@@ -62,7 +62,7 @@ async def fetch_device(pool: asyncpg.Pool, device_id: str) -> DeviceIdentity | N
         return None
     if row is None:
         return None
-    metadata = _parse_json(row["metadata"])
+    metadata = parse_json(row["metadata"])
     return DeviceIdentity(
         device_id=row["id"],
         enabled=row["enabled"],
@@ -101,5 +101,5 @@ async def fetch_profile_schema(
             "device %s references unknown profile %r", identity.device_id, profile_id
         )
         return None
-    field_defs = _parse_json(row["field_defs"])
+    field_defs = parse_json(row["field_defs"])
     return ProfileSchema.from_field_defs(field_defs)

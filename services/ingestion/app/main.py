@@ -73,14 +73,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             subscriber = MqttSubscriber(settings, make_handler(db, writer))
             subscriber_task = asyncio.create_task(subscriber.run())
 
+        modbus_task: asyncio.Task[None] | None = None
+        if settings.modbus_enabled:
+            from .modbus import ModbusPoller, MqttPublisher
+
+            poller = ModbusPoller(db.pool, MqttPublisher(settings), settings)
+            modbus_task = asyncio.create_task(poller.run())
+
         try:
             yield
         finally:
-            for task in (subscriber_task, writer_task):
+            for task in (subscriber_task, writer_task, modbus_task):
                 if task is not None:
                     task.cancel()
             await asyncio.gather(
-                *(t for t in (subscriber_task, writer_task) if t is not None),
+                *(t for t in (subscriber_task, writer_task, modbus_task) if t is not None),
                 return_exceptions=True,
             )
             await db.close()

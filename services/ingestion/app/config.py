@@ -43,5 +43,14 @@ class Settings(BaseSettings):
     write_batch_timeout: float = 0.2
     write_queue_maxsize: int = 10000
 
+    # --- Modbus TCP poller (Task 12) ---------------------------------------------
+    modbus_enabled: bool = True
+    modbus_reload_interval: float = 15.0
+    modbus_default_host: str = ""
+    modbus_default_port: int = 502
+    modbus_default_unit_id: int = 1
+    modbus_read_timeout: float = 5.0
+    modbus_publish_timeout: float = 5.0
+
     # --- Mercure publisher JWT key (used from Task 10) -------------------------
     mercure_publisher_jwt_key: str = "change-me"
