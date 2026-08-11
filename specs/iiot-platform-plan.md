@@ -6,11 +6,11 @@ Deliver a single-tenant IIoT platform deployed per customer VPS via Docker Compo
 (ChirpStack v4) + Modbus TCP + HTTP ingestion, PostgreSQL + TimescaleDB telemetry, JWT auth, and a Vue 3 + PrimeVue 
 live dashboard. 9 containers behind Caddy + Mercure.
 
-**Status:** Tasks 1-14 complete (Phases 0-2): Docker stack, TimescaleDB bootstrap, auth (JWT), device CRUD
+**Status:** Tasks 1-15 complete (Phases 0-2): Docker stack, TimescaleDB bootstrap, auth (JWT), device CRUD
 + provisioning, MQTT broker with per-device ACLs, Caddy + Mercure edge, ingestion (MQTT subscriber,
-HTTP ingest, Modbus TCP poller) → `telemetry_points`, the telemetry read API (`/telemetry`, `/last`,
-`/status`), and the ChirpStack v4 LoRaWAN network server (EU868, gateway bridge UDP 1700, MQTT
-integration, admin UI). Tasks 15-25 pending (LoRaWAN ingestion, dashboard, hardening).
+HTTP ingest, Modbus TCP poller, LoRaWAN uplink) → `telemetry_points`, the telemetry read API (`/telemetry`,
+`/last`, `/status`), and the ChirpStack v4 LoRaWAN network server (EU868, gateway bridge UDP 1700, MQTT
+integration, admin UI). Tasks 16-25 pending (LoRaWAN downlink, dashboard, hardening).
 
 ## Architecture Decisions
 
@@ -308,17 +308,21 @@ integration, admin UI). Tasks 15-25 pending (LoRaWAN ingestion, dashboard, harde
 **Description:** Ingestion consumes ChirpStack uplinks (`application/+/device/+/event/up`), resolves `dev_eui` → platform device, decodes payload (ChirpStack `object` when codec configured, else raw), normalizes into TSDB.
 
 **Acceptance criteria:**
-- [ ] Uplink for a claimed `dev_eui` lands in TSDB under the platform device id
-- [ ] Unknown `dev_eui` logged, not crashed, not written
-- [ ] Raw bytes (base64 `data`) stored in `telemetry_raw` for replay/audit
+- [x] Uplink for a claimed `dev_eui` lands in TSDB under the platform device id
+- [x] Unknown `dev_eui` logged, not crashed, not written
+- [x] Raw bytes (base64 `data`) stored in `telemetry_raw` for replay/audit
 
 **Verification:**
-- [ ] `pytest` LoRaWAN normalization tests pass
-- [ ] Integration: fake ChirpStack uplink published → TSDB row
+- [x] `pytest` LoRaWAN normalization tests pass (109 total)
+- [x] Integration: fake ChirpStack uplink published → TSDB row (`raw` = decoded FRMPayload bytes, points from `object`); also full E2E via `lorasim.py` → ChirpStack NS → broker → ingestion → TSDB (device `70b3d5499e320001` claimed to `lorawan-a`)
+
+**Notes (operational learnings):**
+- ChirpStack v4's real `event/up` envelope nests `devEUI` under `deviceInfo` (not top-level) and has no `object` unless a codec is configured — the dev_eui is taken from the topic, and a codec-less uplink correctly produces 0 points while still archiving the raw FRMPayload.
+- The `telemetry_raw` `raw BYTEA` column was added via `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` on the running DB (init scripts only run on fresh databases).
 
 **Dependencies:** Tasks 10, 14
 
-**Files likely touched:** `services/ingestion/app/{lorawan.py,normalizer.py}`
+**Files likely touched:** `services/ingestion/app/{lorawan.py,normalizer.py,writer.py}`, `db/init/02-telemetry.sql`
 
 **Estimated scope:** Medium
 

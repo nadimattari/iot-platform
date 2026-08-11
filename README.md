@@ -7,11 +7,12 @@ dashboards, time-series insights, and command/downlink control.
 Each customer deploys the full stack on their own VPS via Docker Compose.
 There is no SaaS multi-tenancy.
 
-> **Status: in development.** Phases 0-2 are implemented (Tasks 1-14 of 25): the
+> **Status: in development.** Phases 0-2 are implemented (Tasks 1-15 of 25): the
 > full Docker stack boots locally, MQTT / Modbus TCP / HTTP / LoRaWAN data lands
 > in TimescaleDB behind JWT auth, a telemetry read API (`/telemetry`, `/last`,
 > `/status`) serves it, and a ChirpStack v4 network server (EU868) with a
-> gateway bridge is live. The dashboard and delivery hardening remain.
+> gateway bridge ingests uplinks (raw FRMPayload archived to `telemetry_raw`).
+> The dashboard and delivery hardening remain.
 > See [`specs/iiot-platform.md`](specs/iiot-platform.md) and
 > [`specs/iiot-platform-plan.md`](specs/iiot-platform-plan.md).
 
@@ -67,7 +68,7 @@ LoRaWAN gateways); the broker and database are never exposed directly.
 ## Repository Layout
 
 ```
-specs/        → design spec + implementation plan (Tasks 1-14 checked)
+specs/        → design spec + implementation plan (Tasks 1-15 checked)
 deploy/       → docker-compose, Caddyfile, mqtt/ broker config, chirpstack/, mock-modbus/
 services/     → auth (Node/Fastify), device-mgmt (Symfony), ingestion (Python), dashboard (placeholder)
 db/           → init scripts (databases, telemetry hypertable + continuous aggregates)
