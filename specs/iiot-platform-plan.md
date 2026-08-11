@@ -6,10 +6,11 @@ Deliver a single-tenant IIoT platform deployed per customer VPS via Docker Compo
 (ChirpStack v4) + Modbus TCP + HTTP ingestion, PostgreSQL + TimescaleDB telemetry, JWT auth, and a Vue 3 + PrimeVue 
 live dashboard. 9 containers behind Caddy + Mercure.
 
-**Status:** Tasks 1-13 complete (Phases 0-2): Docker stack, TimescaleDB bootstrap, auth (JWT), device CRUD
+**Status:** Tasks 1-14 complete (Phases 0-2): Docker stack, TimescaleDB bootstrap, auth (JWT), device CRUD
 + provisioning, MQTT broker with per-device ACLs, Caddy + Mercure edge, ingestion (MQTT subscriber,
-HTTP ingest, Modbus TCP poller) → `telemetry_points`, and the telemetry read API (`/telemetry`, `/last`,
-`/status`). Tasks 14-25 pending (ChirpStack/LoRaWAN, dashboard, hardening).
+HTTP ingest, Modbus TCP poller) → `telemetry_points`, the telemetry read API (`/telemetry`, `/last`,
+`/status`), and the ChirpStack v4 LoRaWAN network server (EU868, gateway bridge UDP 1700, MQTT
+integration, admin UI). Tasks 15-25 pending (LoRaWAN ingestion, dashboard, hardening).
 
 ## Architecture Decisions
 
@@ -280,20 +281,26 @@ HTTP ingest, Modbus TCP poller) → `telemetry_points`, and the telemetry read A
 ### Phase 3: ChirpStack + LoRaWAN
 
 #### Task 14: ChirpStack v4 container (EU868)
-**Description:** ChirpStack `4.x` service with `chirpstack.toml` (EU868, shared Mosquitto, own DB schema, Redis), Gateway Bridge for UDP 1700, and admin UI exposed via Caddy at `/chirpstack`.
+**Description:** ChirpStack `4.x` service with `chirpstack.toml` (EU868, shared Mosquitto, own DB schema, Redis), Gateway Bridge for UDP 1700, and admin UI exposed via Caddy. ChirpStack v4 has no sub-path support, so the UI gets its own hostname (`CHIRPSTACK_SITE_ADDR`, dev `http://chirpstack.localhost`).
 
 **Acceptance criteria:**
-- [ ] ChirpStack boots against shared Postgres/Redis/Mosquitto; UI reachable at `/chirpstack`
-- [ ] Region EU868; gateway bridge listens on UDP 1700
-- [ ] MQTT integration enabled (`[integration.mqtt]`); uplinks visible on `application/{id}/device/{devEui}/event/up`
+- [x] ChirpStack boots against shared Postgres/Redis/Mosquitto; UI reachable on its own hostname (`chirpstack.localhost`)
+- [x] Region EU868; gateway bridge listens on UDP 1700
+- [x] MQTT integration enabled (`[integration.mqtt]`); uplinks visible on `application/{id}/device/{devEui}/event/up`
 
 **Verification:**
-- [ ] `docker compose up chirpstack`; log in to UI (admin/admin initially), change creds
-- [ ] Join a real or simulated gateway; observe uplink events on broker
+- [x] `docker compose up chirpstack`; log in to UI (admin/admin initially), change creds
+- [x] Join a real or simulated gateway; observe uplink events on broker (verified with `deploy/chirpstack/scripts/lorasim.py`: OTAA join + uplink, `event/join` + `event/up` observed on the broker)
+
+**Notes (operational learnings):**
+- ChirpStack's diesel migrations require extensions it does not create itself: `pg_trgm`, `hstore`, `pgcrypto` (and `citext`) — added to `db/init/01-databases.sh`; the `chirpstack` role must own/`CREATE` on the `public` schema.
+- `chirpstack-gateway-bridge`'s `-c` flag takes a file, not a directory (unlike `chirpstack`); it uses the default config path instead.
+- Docker drops published host ports for services attached only to internal-only networks; gateway-bridge and rest-api attach to the `frontend` network so UDP 1700 / 8090 bind on the host.
+- v4 REST (`chirpstack-rest-api:8090`) exposes no login; auth is via an API key (`chirpstack create-api-key`). The web UI logs in via the internal gRPC service (`api.InternalService/Login`); admin password change uses `api.UserService/UpdatePassword`.
 
 **Dependencies:** Tasks 2, 7, 8
 
-**Files likely touched:** `deploy/chirpstack/{chirpstack.toml,config/*}`, `deploy/chirpstack/gateway-bridge/*`, `deploy/docker-compose.yml`
+**Files likely touched:** `deploy/chirpstack/{chirpstack.toml,region_eu868.toml,gateway-bridge/*}`, `deploy/chirpstack/scripts/lorasim.py`, `deploy/docker-compose.yml`, `deploy/caddy/Caddyfile`, `deploy/mqtt/acl`, `db/init/01-databases.sh`
 
 **Estimated scope:** Medium
 
