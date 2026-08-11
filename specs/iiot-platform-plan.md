@@ -6,9 +6,10 @@ Deliver a single-tenant IIoT platform deployed per customer VPS via Docker Compo
 (ChirpStack v4) + Modbus TCP + HTTP ingestion, PostgreSQL + TimescaleDB telemetry, JWT auth, and a Vue 3 + PrimeVue 
 live dashboard. 9 containers behind Caddy + Mercure.
 
-**Status:** Tasks 1-12 complete (Phases 0-2): Docker stack, TimescaleDB bootstrap, auth (JWT), device CRUD
-+ provisioning, MQTT broker with per-device ACLs, Caddy + Mercure edge, and ingestion (MQTT subscriber,
-HTTP ingest, Modbus TCP poller) → `telemetry_points`. Tasks 13-25 pending.
+**Status:** Tasks 1-13 complete (Phases 0-2): Docker stack, TimescaleDB bootstrap, auth (JWT), device CRUD
++ provisioning, MQTT broker with per-device ACLs, Caddy + Mercure edge, ingestion (MQTT subscriber,
+HTTP ingest, Modbus TCP poller) → `telemetry_points`, and the telemetry read API (`/telemetry`, `/last`,
+`/status`). Tasks 14-25 pending (ChirpStack/LoRaWAN, dashboard, hardening).
 
 ## Architecture Decisions
 
@@ -257,13 +258,13 @@ HTTP ingest, Modbus TCP poller) → `telemetry_points`. Tasks 13-25 pending.
 **Description:** `GET /devices/{id}/telemetry?from&to&resolution`, `GET /devices/{id}/last`, `GET /devices/{id}/status` — read TSDB, bucket to resolution, compute last_seen online state.
 
 **Acceptance criteria:**
-- [ ] Series query with resolution bucketing returns correct min/max/avg/count per bucket
-- [ ] `/last` returns latest value per field; `/status` reflects last_seen vs heartbeat window
-- [ ] Query for 30 days of a few hundred devices at 1m resolution < 300ms
+- [x] Series query with resolution bucketing returns correct min/max/avg/count per bucket
+- [x] `/last` returns latest value per field; `/status` reflects last_seen vs heartbeat window
+- [x] Query for 30 days of a few hundred devices at 1m resolution < 300ms
 
 **Verification:**
-- [ ] `php bin/phpunit` query tests pass
-- [ ] Manual/perf: seeded dataset, measure query time
+- [x] `php bin/phpunit` query tests pass
+- [x] Manual/perf: seeded dataset, measure query time
 
 **Dependencies:** Tasks 6, 10
 
