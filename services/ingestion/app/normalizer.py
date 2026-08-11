@@ -77,6 +77,26 @@ class Uplink:
         return replace(self, device_id=device_id, points=points)
 
 
+def normalize_payload(device_id: str, data: dict) -> Uplink:
+    """Normalize a plain JSON object (e.g. an HTTP ingest body) for a device.
+
+    The HTTP body is treated exactly like the flat payload MQTT devices send:
+    numeric fields map to points, nested/string fields are skipped, and an
+    optional top-level `time` sets the sample timestamp.
+    """
+    sample_time = _parse_time(data.get("time"))
+    points = tuple(_to_points(data, sample_time, device_id))
+    return Uplink(
+        topic=f"http/{device_id}",
+        protocol="http",
+        device_id=device_id,
+        dev_eui=None,
+        time=sample_time,
+        payload=data,
+        points=points,
+    )
+
+
 def normalize(topic: str, payload: bytes | str) -> Uplink:
     topic = str(topic)  # aiomqtt 2.x messages carry a paho `Topic`, not a plain str
     protocol, device_id, dev_eui = _parse_topic(topic)
@@ -163,7 +183,7 @@ def _to_points(fields: dict, sample_time: datetime, device_id: str | None) -> li
     for field, value in fields.items():
         if field == "time":
             continue
-        numeric = _classify(value)
+        numeric = classify_value(value)
         if numeric is None:
             logger.debug("skipping non-numeric field %r=%r", field, value)
             continue
@@ -179,7 +199,7 @@ def _to_points(fields: dict, sample_time: datetime, device_id: str | None) -> li
     return points
 
 
-def _classify(value: object) -> tuple[str, float] | None:
+def classify_value(value: object) -> tuple[str, float] | None:
     """Return (type, float value) for a telemetry field, or None to skip it."""
     if isinstance(value, bool):
         return ("bool", 1.0 if value else 0.0)

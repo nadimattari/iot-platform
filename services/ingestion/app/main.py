@@ -18,6 +18,7 @@ from .db import Database
 from .devices import resolve_device_id
 from .mqtt import MqttSubscriber
 from .normalizer import NormalizeError, Uplink, normalize
+from .routes.ingest import router as ingest_router
 from .writer import Writer
 
 logger = logging.getLogger(__name__)
@@ -64,6 +65,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             batch_timeout=settings.write_batch_timeout,
             queue_maxsize=settings.write_queue_maxsize,
         )
+        app.state.writer = writer
         writer_task = asyncio.create_task(writer.run())
 
         subscriber_task: asyncio.Task[None] | None = None
@@ -84,6 +86,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             await db.close()
 
     app = FastAPI(title="iiot ingestion service", version="0.1.0", lifespan=lifespan)
+
+    app.include_router(ingest_router)
 
     @app.get("/health")
     async def health() -> dict[str, str]:

@@ -21,6 +21,11 @@
 		reverse_proxy device-mgmt:80
 	}
 
+	# Ingestion API — HTTP ingest endpoint (Task 11). Full path preserved.
+	handle /ingest/* {
+		reverse_proxy ingestion:8000
+	}
+
 	# ChirpStack web UI + API. Upstream is a placeholder until Task 14.
 	handle /chirpstack/* {
 		reverse_proxy chirpstack:8080
