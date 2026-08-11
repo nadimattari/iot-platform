@@ -6,10 +6,13 @@
 CREATE SCHEMA IF NOT EXISTS telemetry;
 
 -- Raw payload audit/replay store: one row per received sample, pre-normalization.
+-- `raw` holds the original payload bytes (LoRaWAN FRMPayload) for replay; the
+-- full normalized envelope stays in `payload` JSONB.
 CREATE TABLE IF NOT EXISTS telemetry.telemetry_raw (
     time      TIMESTAMPTZ NOT NULL,
     device_id UUID        NOT NULL,
     protocol  TEXT        NOT NULL,
+    raw       BYTEA,
     payload   JSONB       NOT NULL
 );
 

@@ -83,6 +83,65 @@ def test_lorawan_without_object_skips_metadata_keys():
     assert fields == {"temperature"}
 
 
+def test_lorawan_uplink_extracts_raw_bytes_from_base64_data():
+    dev_eui = "0012345678ABCDEF"
+    payload = json.dumps({
+        "devEUI": dev_eui,
+        "data": "AQIDBAUG",
+        "fPort": 1,
+        "fCnt": 3,
+    }).encode()
+    uplink = normalize(f"application/1/device/{dev_eui}/event/up", payload)
+    assert uplink.raw == bytes([1, 2, 3, 4, 5, 6])
+
+
+def test_lorawan_uplink_raw_is_none_when_data_missing_or_invalid():
+    dev_eui = "0012345678ABCDEF"
+    uplink = normalize(
+        f"application/1/device/{dev_eui}/event/up",
+        b'{"devEUI":"0012345678ABCDEF","object":{"temperature": 1.0}}',
+    )
+    assert uplink.raw is None
+    uplink = normalize(
+        f"application/1/device/{dev_eui}/event/up",
+        b'{"devEUI":"0012345678ABCDEF","data":"not-valid-base64!!"}',
+    )
+    assert uplink.raw is None
+
+
+def test_chirpstack_v4_envelope_shape_is_handled():
+    dev_eui = "70b3d5499e320001"
+    payload = json.dumps({
+        "deviceInfo": {
+            "devEui": dev_eui,
+            "deviceName": "lorawan-test-1",
+            "applicationId": "30248d5b-b17c-4a6c-8069-927c17486608",
+        },
+        "devAddr": "00065da0",
+        "dr": 0,
+        "fCnt": 0,
+        "fPort": 1,
+        "adr": False,
+        "confirmed": False,
+        "data": "AQIDBAUG",
+        "rxInfo": [{"gatewayId": "0102030405060708", "rssi": -60}],
+        "txInfo": {"frequency": 868100000, "modulation": {"lora": {"spreadingFactor": 12}}},
+        "time": "2026-08-11T14:07:34.825411834+00:00",
+    }).encode()
+    uplink = normalize(f"application/30248d5b-b17c-4a6c-8069-927c17486608/device/{dev_eui}/event/up", payload)
+    assert uplink.dev_eui == dev_eui
+    assert uplink.raw == bytes([1, 2, 3, 4, 5, 6])
+    assert uplink.points == ()
+
+
+def test_mqtt_and_modbus_uplinks_have_no_raw_bytes():
+    device_id = str(uuid.uuid4())
+    uplink = normalize(f"devices/{device_id}/up", b'{"temperature": 1.0}')
+    assert uplink.raw is None
+    uplink = normalize(f"modbus/{device_id}/up", b'{"temperature": 1.0}')
+    assert uplink.raw is None
+
+
 def test_unknown_topic_is_quarantined():
     with pytest.raises(NormalizeError):
         normalize("some/random/topic", b"{}")

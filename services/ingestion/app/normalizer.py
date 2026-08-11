@@ -12,6 +12,8 @@ import uuid
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 
+from .lorawan import extract_raw
+
 logger = logging.getLogger(__name__)
 
 # ChirpStack v4 event envelopes carry a lot of metadata; only the decoded
@@ -67,6 +69,7 @@ class Uplink:
     time: datetime
     payload: dict
     points: tuple[TelemetryPoint, ...] = ()
+    raw: bytes | None = None
 
     def with_device_id(self, device_id: str) -> "Uplink":
         """Return a copy with the (resolved) device id set on all points."""
@@ -119,6 +122,7 @@ def normalize(topic: str, payload: bytes | str) -> Uplink:
         time=sample_time,
         payload=data,
         points=points,
+        raw=extract_raw(data) if protocol == "lorawan" else None,
     )
 
 

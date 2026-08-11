@@ -62,15 +62,34 @@ async def test_flush_writes_raw_audit_and_points():
     assert len(raw) == 1 and len(points) == 1
 
     _, raw_records, raw_columns = raw[0]
-    assert raw_columns == ["time", "device_id", "protocol", "payload"]
+    assert raw_columns == ["time", "device_id", "protocol", "raw", "payload"]
     assert raw_records[0][0] == uplink.time
     assert raw_records[0][1] == uplink.device_id
     assert raw_records[0][2] == "mqtt"
-    assert json.loads(raw_records[0][3]) == uplink.payload
+    assert raw_records[0][3] is None
+    assert json.loads(raw_records[0][4]) == uplink.payload
 
     _, point_records, point_columns = points[0]
     assert point_columns == ["time", "device_id", "field", "value", "type", "quality"]
     assert point_records[0][:2] == (uplink.time, uplink.device_id)
+
+
+async def test_flush_stores_lorawan_raw_bytes():
+    conn = FakeConn()
+    writer = Writer(FakeDatabase(FakePool(conn)))
+    uplink = normalize(
+        "application/1/device/0012345678ABCDEF/event/up",
+        b'{"data":"AQIDBAUG","object":{"temperature": 21.0}}',
+    ).with_device_id(str(uuid.uuid4()))
+
+    await writer._flush([uplink])
+
+    raw = [f for f in conn.flushes if f[0] == "telemetry_raw"]
+    assert len(raw) == 1
+    _, raw_records, _ = raw[0]
+    assert raw_records[0][3] == bytes([1, 2, 3, 4, 5, 6])
+    points = [f for f in conn.flushes if f[0] == "telemetry_points"]
+    assert len(points) == 1
 
 
 async def test_flush_is_idempotent_without_pool():

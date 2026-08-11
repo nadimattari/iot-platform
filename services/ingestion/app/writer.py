@@ -15,7 +15,7 @@ from .normalizer import Uplink
 
 logger = logging.getLogger(__name__)
 
-_RAW_COLUMNS = ["time", "device_id", "protocol", "payload"]
+_RAW_COLUMNS = ["time", "device_id", "protocol", "raw", "payload"]
 _POINT_COLUMNS = ["time", "device_id", "field", "value", "type", "quality"]
 
 
@@ -62,7 +62,7 @@ class Writer:
             logger.warning("dropping %d uplink(s): no database pool", len(batch))
             return
         raw_rows = [
-            (u.time, u.device_id, u.protocol, json.dumps(u.payload))
+            (u.time, u.device_id, u.protocol, u.raw, json.dumps(u.payload))
             for u in batch
             if u.device_id is not None
         ]
