@@ -6,6 +6,10 @@ Deliver a single-tenant IIoT platform deployed per customer VPS via Docker Compo
 (ChirpStack v4) + Modbus TCP + HTTP ingestion, PostgreSQL + TimescaleDB telemetry, JWT auth, and a Vue 3 + PrimeVue 
 live dashboard. 9 containers behind Caddy + Mercure.
 
+**Status:** Tasks 1-12 complete (Phases 0-2): Docker stack, TimescaleDB bootstrap, auth (JWT), device CRUD
++ provisioning, MQTT broker with per-device ACLs, Caddy + Mercure edge, and ingestion (MQTT subscriber,
+HTTP ingest, Modbus TCP poller) → `telemetry_points`. Tasks 13-25 pending.
+
 ## Architecture Decisions
 
 - **Caddy is the only internet-facing service** (80/443 + UDP 1700 for LoRaWAN gateways); broker and DB never exposed directly.
@@ -24,13 +28,13 @@ live dashboard. 9 containers behind Caddy + Mercure.
 **Description:** Create the repo layout (`deploy/`, `services/`, `db/`, `tests/`, `docs/`) and a docker-compose that boots all 9 services with healthchecks, networks, volumes, and `.env.example`. Containers run placeholder images/`sleep` until real apps land in later tasks.
 
 **Acceptance criteria:**
-- [ ] `docker compose up -d` boots all services; `docker compose ps` shows them running
-- [ ] `.env.example` documents every secret (DB, broker, Mercure, JWT, ChirpStack) with no real values committed
-- [ ] Networks isolate internal traffic (broker/db not reachable from host ports)
+- [x] `docker compose up -d` boots all services; `docker compose ps` shows them running
+- [x] `.env.example` documents every secret (DB, broker, Mercure, JWT, ChirpStack) with no real values committed
+- [x] Networks isolate internal traffic (broker/db not reachable from host ports)
 
 **Verification:**
-- [ ] `docker compose up -d && docker compose ps` — all containers `Up`
-- [ ] `docker compose config` validates clean
+- [x] `docker compose up -d && docker compose ps` — all containers `Up`
+- [x] `docker compose config` validates clean
 
 **Dependencies:** None
 
@@ -42,13 +46,13 @@ live dashboard. 9 containers behind Caddy + Mercure.
 **Description:** Init script creates databases `iiot` and `chirpstack`, enables TimescaleDB, creates `telemetry` schema with `telemetry_points` hypertable and `telemetry_raw`, and installs migration tooling (Doctrine Migrations for the Symfony service, plain SQL for ChirpStack schema ownership).
 
 **Acceptance criteria:**
-- [ ] Fresh Postgres container creates both DBs; `telemetry_points(time, device_id, field, value, type, quality)` hypertable + indexes exist
-- [ ] Continuous aggregate definitions (1m/1h/1d) created as part of migration baseline
-- [ ] Migration runner works from within the device-mgmt container
+- [x] Fresh Postgres container creates both DBs; `telemetry_points(time, device_id, field, value, type, quality)` hypertable + indexes exist
+- [x] Continuous aggregate definitions (1m/1h/1d) created as part of migration baseline
+- [x] Migration runner works from within the device-mgmt container
 
 **Verification:**
-- [ ] `docker compose up db` then `psql -c '\d telemetry_points'` shows hypertable
-- [ ] `php bin/console doctrine:migrations:status` reports up-to-date
+- [x] `docker compose up db` then `psql -c '\d telemetry_points'` shows hypertable
+- [x] `php bin/console doctrine:migrations:status` reports up-to-date
 
 **Dependencies:** Task 1
 
@@ -60,13 +64,13 @@ live dashboard. 9 containers behind Caddy + Mercure.
 **Description:** Fastify + TypeScript service with Dockerfile, config, health endpoint, DB migrations for `users` and `refresh_tokens`, Ed25519 key generation on first boot, and admin user seeded from env.
 
 **Acceptance criteria:**
-- [ ] Container boots, healthcheck passes, connects to `iiot` DB
-- [ ] Ed25519 keypair generated once, persisted in volume; public key served at `GET /auth/jwks`
-- [ ] Admin account (email/password from env) seeded idempotently, password bcrypt-hashed
+- [x] Container boots, healthcheck passes, connects to `iiot` DB
+- [x] Ed25519 keypair generated once, persisted in volume; public key served at `GET /auth/jwks`
+- [x] Admin account (email/password from env) seeded idempotently, password bcrypt-hashed
 
 **Verification:**
-- [ ] `curl /health` → 200; `curl /auth/jwks` → JWK
-- [ ] `npm test` passes (auth service unit tests)
+- [x] `curl /health` → 200; `curl /auth/jwks` → JWK
+- [x] `npm test` passes (auth service unit tests)
 
 **Dependencies:** Task 2
 
@@ -78,13 +82,13 @@ live dashboard. 9 containers behind Caddy + Mercure.
 **Description:** Implement token lifecycle: `POST /auth/login` (access 15 min + rotating refresh 30 days), `POST /auth/refresh` (rotate, detect reuse), `POST /auth/logout` (revoke), `GET /auth/me`. Refresh tokens stored hashed.
 
 **Acceptance criteria:**
-- [ ] Login returns signed access JWT + refresh token; invalid credentials → 401
-- [ ] Refresh rotates the token and revokes the old one; reused refresh token revokes the whole family
-- [ ] Logout revokes the presented refresh token
+- [x] Login returns signed access JWT + refresh token; invalid credentials → 401
+- [x] Refresh rotates the token and revokes the old one; reused refresh token revokes the whole family
+- [x] Logout revokes the presented refresh token
 
 **Verification:**
-- [ ] `npm test` (auth flow tests) passes
-- [ ] Manual: login → refresh → logout via curl; reuse of rotated token rejected
+- [x] `npm test` (auth flow tests) passes
+- [x] Manual: login → refresh → logout via curl; reuse of rotated token rejected
 
 **Dependencies:** Task 3
 
@@ -103,13 +107,13 @@ live dashboard. 9 containers behind Caddy + Mercure.
 **Description:** Symfony service with FrankenPHP worker Dockerfile, Doctrine connection to `iiot`, config from env, and a JWT-authentication guard that validates Ed25519 tokens against the cached JWKS (from the auth service).
 
 **Acceptance criteria:**
-- [ ] Container boots; `GET /api/v1/health` → 200
-- [ ] Requests with valid JWT pass; missing/invalid JWT → 401; JWKS cached and refreshed
-- [ ] `php bin/phpunit` runs a basic smoke test
+- [x] Container boots; `GET /api/v1/health` → 200
+- [x] Requests with valid JWT pass; missing/invalid JWT → 401; JWKS cached and refreshed
+- [x] `php bin/phpunit` runs a basic smoke test
 
 **Verification:**
-- [ ] `docker compose up device-mgmt` + curl with/without token
-- [ ] `php bin/console lint:container` passes
+- [x] `docker compose up device-mgmt` + curl with/without token
+- [x] `php bin/console lint:container` passes
 
 **Dependencies:** Tasks 2, 4
 
@@ -121,13 +125,13 @@ live dashboard. 9 containers behind Caddy + Mercure.
 **Description:** `device_groups`, `devices`, `device_profiles` entities + migrations; REST endpoints for CRUD, claim (attach `dev_eui`/protocol), enable/disable, list with pagination and protocol filter.
 
 **Acceptance criteria:**
-- [ ] Create/list/get/update/delete device via `/api/v1/devices`; protocol enum enforced [mqtt, lorawan, modbus, http]
-- [ ] Claim associates `dev_eui` (unique) for LoRaWAN or generates per-device credentials for MQTT/HTTP
-- [ ] Device provisioning generates `api_key_hash`; plaintext shown once
+- [x] Create/list/get/update/delete device via `/api/v1/devices`; protocol enum enforced [mqtt, lorawan, modbus, http]
+- [x] Claim associates `dev_eui` (unique) for LoRaWAN or generates per-device credentials for MQTT/HTTP
+- [x] Device provisioning generates `api_key_hash`; plaintext shown once
 
 **Verification:**
-- [ ] `php bin/phpunit` device tests pass
-- [ ] Manual: full device lifecycle via curl
+- [x] `php bin/phpunit` device tests pass
+- [x] Manual: full device lifecycle via curl
 
 **Dependencies:** Task 5
 
@@ -139,13 +143,13 @@ live dashboard. 9 containers behind Caddy + Mercure.
 **Description:** Mosquitto config with auth + ACLs; device-mgmt provisions broker credentials (generate password, append to `mosquitto.passwd`, ACL rule `devices/{deviceId}/#`) when a device is created/claimed; remove on delete. ChirpStack gets its own broker user.
 
 **Acceptance criteria:**
-- [ ] Anonymous MQTT access denied; each device can publish/subscribe only its own `devices/{deviceId}/#`
-- [ ] Creating a device makes its credential immediately usable; deleting removes it
-- [ ] ChirpStack connects with its own credentials
+- [x] Anonymous MQTT access denied; each device can publish/subscribe only its own `devices/{deviceId}/#`
+- [x] Creating a device makes its credential immediately usable; deleting removes it
+- [x] ChirpStack connects with its own credentials
 
 **Verification:**
-- [ ] `mosquitto_pub` with device credential succeeds on own topic, fails on another's
-- [ ] Integration test: create device via API → publish → subscribe OK
+- [x] `mosquitto_pub` with device credential succeeds on own topic, fails on another's
+- [x] Integration test: create device via API → publish → subscribe OK
 
 **Dependencies:** Task 6
 
@@ -157,13 +161,13 @@ live dashboard. 9 containers behind Caddy + Mercure.
 **Description:** Caddyfile routing `/auth/*` → auth, `/api/v1/*` → device-mgmt, `/chirpstack/*` → ChirpStack (later), `/dashboard` → static SPA image, plus Mercure hub enabled with publisher/private JWTs and topic ACLs.
 
 **Acceptance criteria:**
-- [ ] Each path proxies to the right service; SPA placeholder serves at `/dashboard`
-- [ ] Mercure hub responds to SSE subscription with a valid subscriber JWT
-- [ ] TLS auto-provisioned from env domain; works behind HTTP for local dev
+- [x] Each path proxies to the right service; SPA placeholder serves at `/dashboard`
+- [x] Mercure hub responds to SSE subscription with a valid subscriber JWT
+- [x] TLS auto-provisioned from env domain; works behind HTTP for local dev
 
 **Verification:**
-- [ ] curl each route; `curl -H "Accept: text/event-stream"` on a Mercure topic returns a stream
-- [ ] `docker compose up` brings Caddy up healthy
+- [x] curl each route; `curl -H "Accept: text/event-stream"` on a Mercure topic returns a stream
+- [x] `docker compose up` brings Caddy up healthy
 
 **Dependencies:** Tasks 1, 4, 7
 
@@ -182,12 +186,12 @@ live dashboard. 9 containers behind Caddy + Mercure.
 **Description:** FastAPI + asyncio service with Dockerfile, env config, health endpoint, and structured asyncpg connection pool to `iiot` DB.
 
 **Acceptance criteria:**
-- [ ] Container boots; `GET /health` → 200
-- [ ] Config loaded from env; no secrets in code
-- [ ] `pytest` runs
+- [x] Container boots; `GET /health` → 200
+- [x] Config loaded from env; no secrets in code
+- [x] `pytest` runs
 
 **Verification:**
-- [ ] `docker compose up ingestion`; curl health; `pytest`
+- [x] `docker compose up ingestion`; curl health; `pytest`
 
 **Dependencies:** Tasks 2, 5
 
@@ -199,13 +203,13 @@ live dashboard. 9 containers behind Caddy + Mercure.
 **Description:** asyncio MQTT client subscribes to `devices/{id}/up`, `modbus/{id}/up`, `application/+/device/+/event/up`; normalizer maps raw payloads to `TelemetryPoint`; writer batch-inserts to `telemetry_points` (+ `telemetry_raw` audit) with backpressure and no blocking of the MQTT loop.
 
 **Acceptance criteria:**
-- [ ] Uplink on any subscribed topic yields rows in `telemetry_points` within 1s
-- [ ] Unknown/unparseable payloads logged and quarantined, never crash the loop
-- [ ] Batched writes (asyncpg, `COPY` for bursts) survive a 1k-message burst
+- [x] Uplink on any subscribed topic yields rows in `telemetry_points` within 1s
+- [x] Unknown/unparseable payloads logged and quarantined, never crash the loop
+- [x] Batched writes (asyncpg, `COPY` for bursts) survive a 1k-message burst
 
 **Verification:**
-- [ ] `pytest` normalizer/writer tests pass
-- [ ] Integration: publish MQTT sample → row in TSDB
+- [x] `pytest` normalizer/writer tests pass
+- [x] Integration: publish MQTT sample → row in TSDB
 
 **Dependencies:** Tasks 7, 9
 
@@ -217,13 +221,13 @@ live dashboard. 9 containers behind Caddy + Mercure.
 **Description:** `POST /ingest/http/{deviceId}` accepting JSON payloads, authenticated by device API key (constant-time compare of hash), validated against the device profile schema.
 
 **Acceptance criteria:**
-- [ ] Valid key + payload → 202, row in TSDB; invalid/missing key → 401
-- [ ] Payload validated against `device_profiles.field_defs`; bad payload → 422
-- [ ] Reuses the same normalizer/writer as Task 10
+- [x] Valid key + payload → 202, row in TSDB; invalid/missing key → 401
+- [x] Payload validated against `device_profiles.field_defs`; bad payload → 422
+- [x] Reuses the same normalizer/writer as Task 10
 
 **Verification:**
-- [ ] `pytest` auth + validation tests pass
-- [ ] Manual: `curl -H "X-API-Key: ..." -d '{...}'` → row appears
+- [x] `pytest` auth + validation tests pass
+- [x] Manual: `curl -H "X-API-Key: ..." -d '{...}'` → row appears
 
 **Dependencies:** Tasks 6, 10
 
@@ -235,13 +239,13 @@ live dashboard. 9 containers behind Caddy + Mercure.
 **Description:** Async Modbus master polls `modbus_register_config` per device on independent intervals; decoded samples flow through the normalizer to TSDB and `modbus/{deviceId}/up`.
 
 **Acceptance criteria:**
-- [ ] Registers read correctly per datatype/byteorder/scale for each configured device
-- [ ] Poll intervals are per-device/per-register; a dead device doesn't stall others
-- [ ] Register config CRUD (`GET/PUT /devices/{id}/registers`) drives live poller behavior
+- [x] Registers read correctly per datatype/byteorder/scale for each configured device
+- [x] Poll intervals are per-device/per-register; a dead device doesn't stall others
+- [x] Register config CRUD (`GET/PUT /devices/{id}/registers`) drives live poller behavior
 
 **Verification:**
-- [ ] `pytest` register-decoding tests pass (fixtures for int32/float32/uint16 + byte orders)
-- [ ] Manual: point poller at a mock Modbus server → samples in TSDB
+- [x] `pytest` register-decoding tests pass (fixtures for int32/float32/uint16 + byte orders)
+- [x] Manual: point poller at a mock Modbus server → samples in TSDB
 
 **Dependencies:** Tasks 6, 10
 

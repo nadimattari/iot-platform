@@ -7,9 +7,11 @@ dashboards, time-series insights, and command/downlink control.
 Each customer deploys the full stack on their own VPS via Docker Compose.
 There is no SaaS multi-tenancy.
 
-> **Status: planning.** The architecture is specified; implementation has not
-> started. See [`specs/iiot-platform.md`](specs/iiot-platform.md) and
-> [`specs/iiot-platform-plan.md`](specs/iiot-platform-plan.md).
+> **Status: in development.** Phases 0-2 are implemented (Tasks 1-12 of 25): the
+> full Docker stack boots locally, and MQTT, Modbus TCP, and HTTP ingest data into
+> TimescaleDB behind JWT auth. LoRaWAN, the telemetry read API, dashboard, and
+> delivery hardening remain. See [`specs/iiot-platform.md`](specs/iiot-platform.md)
+> and [`specs/iiot-platform-plan.md`](specs/iiot-platform-plan.md).
 
 ## Stack
 
@@ -63,15 +65,20 @@ LoRaWAN gateways); the broker and database are never exposed directly.
 ## Repository Layout
 
 ```
-specs/        → design spec + implementation plan
-deploy/       → docker-compose, Caddyfile, broker/ChirpStack config (planned)
-services/     → auth, device-mgmt, ingestion, dashboard (planned)
-db/           → SQL bootstrap (planned)
-tests/        → integration + e2e (planned)
-docs/         → runbook, backup, acceptance (planned)
+specs/        → design spec + implementation plan (Tasks 1-12 checked)
+deploy/       → docker-compose, Caddyfile, mqtt/ broker config, chirpstack/, mock-modbus/
+services/     → auth (Node/Fastify), device-mgmt (Symfony), ingestion (Python), dashboard (placeholder)
+db/           → init scripts (databases, telemetry hypertable + continuous aggregates)
+tests/        → integration + e2e (scaffolds)
+docs/         → agent/IDE setup guides
 ```
 
 ## Getting Started
+
+```bash
+cp deploy/.env.example deploy/.env   # fill in secrets
+docker compose -f deploy/docker-compose.yml up -d
+```
 
 See the [spec](specs/iiot-platform.md) for objectives and success criteria,
 and the [implementation plan](specs/iiot-platform-plan.md) for the 25-task breakdown across 6 phases.
