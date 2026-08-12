@@ -25,7 +25,7 @@ final class DownlinkControllerTest extends WebTestCase
         $this->client->disableReboot();
         self::getContainer()->set('App\Security\JwksProvider', $this->fakeProvider($this->publicKey));
         $this->publisher = new FakeDownlinkPublisher();
-        self::getContainer()->set('App\Message\DownlinkPublisherInterface', $this->publisher);
+        self::getContainer()->set('App\Message\MqttPublisher', $this->publisher);
         self::getContainer()->set('App\Service\BrokerCredentialProvisioner', new FakeBrokerCredentialProvisioner());
 
         $conn = self::getContainer()->get(EntityManagerInterface::class)->getConnection();

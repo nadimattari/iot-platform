@@ -8,11 +8,11 @@ use PhpMqtt\Client\ConnectionSettings;
 use PhpMqtt\Client\MqttClient;
 
 /**
- * Publishes ChirpStack downlink commands to the broker over MQTT 3.1.1.
- * A fresh connection is opened per publish: the enqueue API is low-rate and
- * this avoids stale-connection handling entirely.
+ * Publishes command messages (LoRaWAN downlinks, MQTT device commands) to the
+ * broker over MQTT 3.1.1. A fresh connection is opened per publish: the
+ * command APIs are low-rate and this avoids stale-connection handling entirely.
  */
-final class MqttDownlinkPublisher implements DownlinkPublisherInterface
+final class MqttPublisher implements DownlinkPublisherInterface, MqttCommandPublisherInterface
 {
     public function __construct(
         private readonly string $host,

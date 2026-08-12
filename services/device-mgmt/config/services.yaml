@@ -43,14 +43,18 @@ services:
         arguments:
             $passwdFile: '%env(MQTT_PASSWD_FILE)%'
 
-    # Downlink publisher used by DownlinkService (enqueue API).
-    App\Message\DownlinkPublisherInterface:
-        class: App\Message\MqttDownlinkPublisher
+    # Command publisher used by DownlinkService (LoRaWAN) and MqttCommandService
+    # (MQTT devices): one shared MQTT client wrapper, bound to both interfaces.
+    App\Message\MqttPublisher:
         arguments:
             $host: '%env(MQTT_HOST)%'
             $port: '%env(int:MQTT_PORT)%'
             $username: '%env(MQTT_DOWNLINK_USERNAME)%'
             $password: '%env(MQTT_DOWNLINK_PASSWORD)%'
+    App\Message\DownlinkPublisherInterface:
+        alias: App\Message\MqttPublisher
+    App\Message\MqttCommandPublisherInterface:
+        alias: App\Message\MqttPublisher
 
     # DownlinkService needs the ChirpStack application ID to build the topic.
     App\Service\DownlinkService:
@@ -65,3 +69,11 @@ services:
             $username: '%env(MQTT_DOWNLINK_USERNAME)%'
             $password: '%env(MQTT_DOWNLINK_PASSWORD)%'
             $applicationId: '%env(CHIRPSTACK_APPLICATION_ID)%'
+
+    # Long-running MQTT device ACK consumer (console command).
+    App\Consumer\ConsumeMqttAckCommand:
+        arguments:
+            $host: '%env(MQTT_HOST)%'
+            $port: '%env(int:MQTT_PORT)%'
+            $username: '%env(MQTT_DOWNLINK_USERNAME)%'
+            $password: '%env(MQTT_DOWNLINK_PASSWORD)%'
