@@ -6,13 +6,14 @@ Deliver a single-tenant IIoT platform deployed per customer VPS via Docker Compo
 (ChirpStack v4) + Modbus TCP + HTTP ingestion, PostgreSQL + TimescaleDB telemetry, JWT auth, and a Vue 3 + PrimeVue 
 live dashboard. 9 containers behind Caddy + Mercure.
 
-**Status:** Tasks 1-16 complete (Phases 0-2): Docker stack, TimescaleDB bootstrap, auth (JWT), device CRUD
+**Status:** Tasks 1-17 complete (Phases 0-2): Docker stack, TimescaleDB bootstrap, auth (JWT), device CRUD
 + provisioning, MQTT broker with per-device ACLs, Caddy + Mercure edge, ingestion (MQTT subscriber,
 HTTP ingest, Modbus TCP poller, LoRaWAN uplink) → `telemetry_points`, the telemetry read API (`/telemetry`,
 `/last`, `/status`), the ChirpStack v4 LoRaWAN network server (EU868, gateway bridge UDP 1700, MQTT
-integration, admin UI), and LoRaWAN confirmed downlinks with command lifecycle tracking (`event/txack` →
-`sent`, `event/ack` → `acked`, timeout → `failed`). Tasks 17-25 pending (unified command API, dashboard,
-hardening).
+integration, admin UI), LoRaWAN confirmed downlinks with command lifecycle tracking (`event/txack` →
+`sent`, `event/ack` → `acked`, timeout → `failed`), and a unified command API (`POST /devices/{id}/commands`
+routing by protocol to MQTT `devices/{id}/down` or ChirpStack, `GET /commands` history). Tasks 18-25 pending
+(dashboard, hardening).
 
 ## Architecture Decisions
 
@@ -352,13 +353,16 @@ hardening).
 **Description:** Single `POST /devices/{id}/commands` handling MQTT down (`devices/{id}/down`) and LoRaWAN (via DownlinkService); `commands` table records status; `GET /commands` lists history; status updates via broker ACK consumers.
 
 **Acceptance criteria:**
-- [ ] One endpoint sends commands over both transports with correct topic/payload
-- [ ] Command lifecycle visible: pending → sent → acked/failed
-- [ ] Disabled/unknown device → 4xx
+- [x] One endpoint sends commands over both transports with correct topic/payload
+- [x] Command lifecycle visible: pending → sent → acked/failed
+- [x] Disabled/unknown device → 4xx
 
 **Verification:**
-- [ ] `php bin/phpunit` command tests pass
-- [ ] Integration: MQTT mock device ACKs → status updates
+- [x] `php bin/phpunit` command tests pass (112 tests, 417 assertions, 0 failures)
+- [x] Integration: MQTT mock device ACKs → status updates
+- [x] Live E2E MQTT: `POST /devices/{id}/commands` → `devices/{id}/down` `{"id","payload"}` → mock device echoes id on `devices/{id}/ack` → `device-mgmt-consumer-acks` sets status `acked`
+- [x] Live E2E LoRaWAN: same endpoint routes to ChirpStack `command/down`, lorasim ACKs → status `acked`
+- [x] `GET /commands?device_id=&status=&page=&limit=` returns paginated history; no auth → 401
 
 **Dependencies:** Tasks 7, 10, 16
 
@@ -367,9 +371,9 @@ hardening).
 **Estimated scope:** Medium
 
 ### Checkpoint D (after Tasks 14-17)
-- [ ] LoRaWAN uplink → TSDB; downlink reaches ChirpStack queue; ACK updates status
-- [ ] Commands work for MQTT and LoRaWAN via one API
-- [ ] Review with human before proceeding
+- [x] LoRaWAN uplink → TSDB; downlink reaches ChirpStack queue; ACK updates status
+- [x] Commands work for MQTT and LoRaWAN via one API
+- [x] Review with human before proceeding
 
 ### Phase 4: Real-time + Insights + Dashboard
 
