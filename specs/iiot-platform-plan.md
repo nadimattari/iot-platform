@@ -6,13 +6,15 @@ Deliver a single-tenant IIoT platform deployed per customer VPS via Docker Compo
 (ChirpStack v4) + Modbus TCP + HTTP ingestion, PostgreSQL + TimescaleDB telemetry, JWT auth, and a Vue 3 + PrimeVue 
 live dashboard. 9 containers behind Caddy + Mercure.
 
-**Status:** Tasks 1-17 complete (Phases 0-2): Docker stack, TimescaleDB bootstrap, auth (JWT), device CRUD
+**Status:** Tasks 1-18 complete (Phases 0-2): Docker stack, TimescaleDB bootstrap, auth (JWT), device CRUD
 + provisioning, MQTT broker with per-device ACLs, Caddy + Mercure edge, ingestion (MQTT subscriber,
 HTTP ingest, Modbus TCP poller, LoRaWAN uplink) → `telemetry_points`, the telemetry read API (`/telemetry`,
 `/last`, `/status`), the ChirpStack v4 LoRaWAN network server (EU868, gateway bridge UDP 1700, MQTT
 integration, admin UI), LoRaWAN confirmed downlinks with command lifecycle tracking (`event/txack` →
-`sent`, `event/ack` → `acked`, timeout → `failed`), and a unified command API (`POST /devices/{id}/commands`
-routing by protocol to MQTT `devices/{id}/down` or ChirpStack, `GET /commands` history). Tasks 18-25 pending
+`sent`, `event/ack` → `acked`, timeout → `failed`), a unified command API (`POST /devices/{id}/commands`
+routing by protocol to MQTT `devices/{id}/down` or ChirpStack, `GET /commands` history), and real-time
+Mercure events (ingestion publishes per-device telemetry to `/devices/{id}`, Symfony publishes command
+status to `/devices/{id}/commands`, subscriber JWT enforced). Tasks 19-25 pending
 (dashboard, hardening).
 
 ## Architecture Decisions
@@ -381,13 +383,13 @@ routing by protocol to MQTT `devices/{id}/down` or ChirpStack, `GET /commands` h
 **Description:** Ingestion publishes normalized events to Mercure topic `/devices/{deviceId}` (publisher JWT, shared secret from env); Symfony publishes command/status events; subscribers authorized by topic ACL.
 
 **Acceptance criteria:**
-- [ ] New telemetry for a device appears on its SSE topic in < 1s
-- [ ] Command status changes push to the dashboard topic
-- [ ] Subscription denied without valid subscriber JWT
+- [x] New telemetry for a device appears on its SSE topic in < 1s
+- [x] Command status changes push to the dashboard topic
+- [x] Subscription denied without valid subscriber JWT
 
 **Verification:**
-- [ ] Integration: publish MQTT → SSE event received on subscribed topic
-- [ ] Security: no token → 401 on Mercure subscribe
+- [x] Integration: publish MQTT → SSE event received on subscribed topic
+- [x] Security: no token → 401 on Mercure subscribe
 
 **Dependencies:** Tasks 8, 10, 17
 
