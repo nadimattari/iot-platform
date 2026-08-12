@@ -6,11 +6,13 @@ Deliver a single-tenant IIoT platform deployed per customer VPS via Docker Compo
 (ChirpStack v4) + Modbus TCP + HTTP ingestion, PostgreSQL + TimescaleDB telemetry, JWT auth, and a Vue 3 + PrimeVue 
 live dashboard. 9 containers behind Caddy + Mercure.
 
-**Status:** Tasks 1-15 complete (Phases 0-2): Docker stack, TimescaleDB bootstrap, auth (JWT), device CRUD
+**Status:** Tasks 1-16 complete (Phases 0-2): Docker stack, TimescaleDB bootstrap, auth (JWT), device CRUD
 + provisioning, MQTT broker with per-device ACLs, Caddy + Mercure edge, ingestion (MQTT subscriber,
 HTTP ingest, Modbus TCP poller, LoRaWAN uplink) → `telemetry_points`, the telemetry read API (`/telemetry`,
-`/last`, `/status`), and the ChirpStack v4 LoRaWAN network server (EU868, gateway bridge UDP 1700, MQTT
-integration, admin UI). Tasks 16-25 pending (LoRaWAN downlink, dashboard, hardening).
+`/last`, `/status`), the ChirpStack v4 LoRaWAN network server (EU868, gateway bridge UDP 1700, MQTT
+integration, admin UI), and LoRaWAN confirmed downlinks with command lifecycle tracking (`event/txack` →
+`sent`, `event/ack` → `acked`, timeout → `failed`). Tasks 17-25 pending (unified command API, dashboard,
+hardening).
 
 ## Architecture Decisions
 
@@ -327,16 +329,18 @@ integration, admin UI). Tasks 16-25 pending (LoRaWAN downlink, dashboard, harden
 **Estimated scope:** Medium
 
 #### Task 16: LoRaWAN downlink + ack
-**Description:** Symfony publishes downlink to `application/{id}/device/{devEui}/command/down` via the broker (`devEui`, `confirmed`, `fPort`, `data`/`object`); tracks `event/ack` and `event/downlink` to update command status.
+**Description:** Symfony publishes downlink to `application/{id}/device/{devEui}/command/down` via the broker (`id` UUID for correlation, `devEui`, `confirmed`, `fPort`, `data`/`object`); tracks `event/ack` (device ACK or timeout) and `event/txack` (gateway accepted transmission) to update command status. Note: ChirpStack v4 has **no** `event/downlink` — only `up`, `join`, `ack`, `txack`, `log`, `status`, `location`; ACK/TxACK carry `queueItemId` matching the downlink command `id`.
 
 **Acceptance criteria:**
-- [ ] Enqueue downlink via API → message appears on ChirpStack topic with correct format
-- [ ] ACK event updates command status to `acked`; failure/sent events handled
-- [ ] Base64 `data` or decoded `object` supported
+- [x] Enqueue downlink via API → message appears on ChirpStack topic with correct format (`id`/`devEui`/`confirmed`/`fPort`/`data`|`object`)
+- [x] `event/ack` updates command status to `acked` (or `failed` on timeout); `event/txack` → `sent`
+- [x] Base64 `data` or decoded `object` supported
 
 **Verification:**
-- [ ] `php bin/phpunit` downlink payload tests pass
-- [ ] Integration: enqueue → observe ChirpStack queue via UI
+- [x] `php bin/phpunit` downlink payload tests pass (82 tests, 308 assertions, 0 failures)
+- [x] Integration: enqueue → observe ChirpStack queue via UI
+- [x] Live E2E: confirmed downlink via `POST /devices/{id}/downlink` → `deploy/chirpstack/scripts/lorasim.py` receives + decrypts payload (`01020304050607`), ACKs → `event/txack` + `event/ack` consumed by `device-mgmt-consumer` → command status `sent` → `acked`
+- [x] Consumer regression: php-mqtt v2.x subscription callbacks pass raw string content (not a `Message` object); callback no longer type-hints `Message`, covered by `ConsumeDownlinkEventsCommandTest`
 
 **Dependencies:** Tasks 14, 15, 7
 
