@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Entity\CommandStatus;
 use App\Entity\Device;
 use App\Entity\DeviceRepository;
+use App\Service\CommandSerializer;
 use App\Service\CommandService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -14,8 +15,6 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
-
-use function App\Service\serialize_command;
 
 /**
  * Unified command API: one endpoint sends commands over the device's transport
@@ -38,7 +37,7 @@ final class CommandController extends AbstractController
     {
         $command = $this->service->send($this->find($id), $this->jsonBody($request));
 
-        return new JsonResponse(['command' => serialize_command($command)], Response::HTTP_CREATED);
+        return new JsonResponse(['command' => CommandSerializer::serialize($command)], Response::HTTP_CREATED);
     }
 
     #[Route('/commands', methods: ['GET'])]

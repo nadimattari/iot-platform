@@ -32,7 +32,7 @@ final class CommandService
         $result = $this->commands->search($device, $status, $page, $limit);
 
         return [
-            'items' => array_map(serialize_command(...), $result['items']),
+            'items' => array_map(CommandSerializer::serialize(...), $result['items']),
             'total' => $result['total'],
             'page' => $result['page'],
             'limit' => $result['limit'],

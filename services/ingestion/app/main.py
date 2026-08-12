@@ -16,6 +16,7 @@ from fastapi import FastAPI
 from .config import Settings
 from .db import Database
 from .devices import resolve_device_id
+from .mercure import MercurePublisher
 from .mqtt import MqttSubscriber
 from .normalizer import NormalizeError, Uplink, normalize
 from .routes.ingest import router as ingest_router
@@ -59,11 +60,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         await db.open()
         app.state.db = db
 
+        mercure = MercurePublisher(settings.mercure_hub_url, settings.mercure_publisher_jwt_key)
+        app.state.mercure = mercure
+
         writer = Writer(
             db,
             batch_size=settings.write_batch_size,
             batch_timeout=settings.write_batch_timeout,
             queue_maxsize=settings.write_queue_maxsize,
+            mercure=mercure,
         )
         app.state.writer = writer
         writer_task = asyncio.create_task(writer.run())
@@ -90,6 +95,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 *(t for t in (subscriber_task, writer_task, modbus_task) if t is not None),
                 return_exceptions=True,
             )
+            await mercure.aclose()
             await db.close()
 
     app = FastAPI(title="iiot ingestion service", version="0.1.0", lifespan=lifespan)

@@ -13,26 +13,6 @@ use App\Message\DownlinkPayload;
 use App\Message\DownlinkPublisherInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
-/**
- * @return array<string, mixed>
- */
-function serialize_command(Command $command): array
-{
-    return [
-        'id' => $command->getId(),
-        'device_id' => $command->getDevice()->getId(),
-        'type' => $command->getType()->value,
-        'status' => $command->getStatus()->value,
-        'payload' => $command->getPayload(),
-        'confirmed' => $command->isConfirmed(),
-        'f_port' => $command->getFPort(),
-        'queue_item_id' => $command->getQueueItemId(),
-        'error' => $command->getError(),
-        'created_at' => $command->getCreatedAt()->format(\DateTimeInterface::ATOM),
-        'updated_at' => $command->getUpdatedAt()->format(\DateTimeInterface::ATOM),
-    ];
-}
-
 final class DownlinkService
 {
     public function __construct(

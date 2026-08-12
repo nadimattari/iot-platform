@@ -52,5 +52,6 @@ class Settings(BaseSettings):
     modbus_read_timeout: float = 5.0
     modbus_publish_timeout: float = 5.0
 
-    # --- Mercure publisher JWT key (used from Task 10) -------------------------
-    mercure_publisher_jwt_key: str = "change-me"
+    # --- Mercure publisher (Task 18) ----------------------------------------
+    mercure_hub_url: str = Field("http://caddy/.well-known/mercure", validation_alias=AliasChoices("MERCURE_HUB_URL"))
+    mercure_publisher_jwt_key: str = Field("change-me", validation_alias=AliasChoices("MERCURE_PUBLISHER_JWT_KEY"))

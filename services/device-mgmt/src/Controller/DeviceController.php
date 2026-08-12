@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Entity\Device;
 use App\Entity\DeviceProtocol;
 use App\Entity\DeviceRepository;
+use App\Service\CommandSerializer;
 use App\Service\DeviceConflictException;
 use App\Service\DeviceService;
 use App\Service\DownlinkService;
@@ -17,7 +18,6 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 
-use function App\Service\serialize_command;
 use function App\Service\serialize_device;
 
 #[Route('/api/v1/devices')]
@@ -131,7 +131,7 @@ final class DeviceController extends AbstractController
 
         $command = $this->downlinks->enqueue($device, $fPort, $confirmed, $data, $object);
 
-        return new JsonResponse(['command' => serialize_command($command)], Response::HTTP_CREATED);
+        return new JsonResponse(['command' => CommandSerializer::serialize($command)], Response::HTTP_CREATED);
     }
 
     #[Route('/{id}/claim', methods: ['POST'])]

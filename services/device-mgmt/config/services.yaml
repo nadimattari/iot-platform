@@ -20,6 +20,11 @@ parameters:
     env(MQTT_DOWNLINK_USERNAME): ''
     env(MQTT_DOWNLINK_PASSWORD): ''
     env(CHIRPSTACK_APPLICATION_ID): ''
+    # Mercure hub for live command/status events. Empty key = publishing
+    # disabled (EventPublisher short-circuits); the hub URL points at the
+    # Caddy front that terminates the public `/dashboard/` route.
+    env(MERCURE_HUB_URL): 'http://caddy/.well-known/mercure'
+    env(MERCURE_PUBLISHER_JWT_KEY): ''
 
 services:
     # default configuration for services in *this* file
@@ -60,6 +65,14 @@ services:
     App\Service\DownlinkService:
         arguments:
             $chirpstackApplicationId: '%env(CHIRPSTACK_APPLICATION_ID)%'
+
+    # Publishes command/status events to the Mercure hub (Topic: /devices/{id}/commands).
+    App\Service\EventPublisher:
+        arguments:
+            $hubUrl: '%env(MERCURE_HUB_URL)%'
+            $jwtKey: '%env(MERCURE_PUBLISHER_JWT_KEY)%'
+    App\Service\MercurePublisherInterface:
+        alias: App\Service\EventPublisher
 
     # Long-running ACK/TxACK event consumer (console command).
     App\Consumer\ConsumeDownlinkEventsCommand:

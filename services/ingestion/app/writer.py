@@ -9,8 +9,10 @@ inside one transaction, using `COPY` for burst throughput.
 import asyncio
 import json
 import logging
+from typing import Any
 
 from .db import Database
+from .mercure import MercurePublisher, telemetry_points_by_device
 from .normalizer import Uplink
 
 logger = logging.getLogger(__name__)
@@ -27,11 +29,13 @@ class Writer:
         batch_size: int = 500,
         batch_timeout: float = 0.2,
         queue_maxsize: int = 10000,
+        mercure: MercurePublisher | None = None,
     ) -> None:
         self._db = db
         self._batch_size = batch_size
         self._batch_timeout = batch_timeout
         self._queue: asyncio.Queue[Uplink] = asyncio.Queue(maxsize=queue_maxsize)
+        self._mercure = mercure
 
     @property
     def queue_size(self) -> int:
@@ -89,3 +93,14 @@ class Writer:
                         )
         except Exception:
             logger.exception("write batch of %d uplink(s) failed", len(batch))
+            return
+
+        await self._publish_events(point_rows)
+
+    async def _publish_events(self, point_rows: list[tuple[Any, ...]]) -> None:
+        """Push one Mercure event per device in the batch, after a successful write."""
+        if self._mercure is None or not point_rows:
+            return
+        time_iso = point_rows[0][0].isoformat()
+        for device_id, points in telemetry_points_by_device(point_rows).items():
+            await self._mercure.publish_telemetry(device_id, time_iso, points)

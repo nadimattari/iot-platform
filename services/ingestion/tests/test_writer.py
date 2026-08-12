@@ -2,6 +2,7 @@ import asyncio
 import json
 import uuid
 
+from app.mercure import MercurePublisher
 from app.normalizer import normalize
 from app.writer import Writer
 
@@ -95,6 +96,38 @@ async def test_flush_stores_lorawan_raw_bytes():
 async def test_flush_is_idempotent_without_pool():
     writer = Writer(FakeDatabase(pool=None))
     await writer._flush([make_uplink()])
+
+
+async def test_flush_publishes_one_mercure_event_per_device():
+    conn = FakeConn()
+    mercure = FakeMercurePublisher()
+    writer = Writer(FakeDatabase(FakePool(conn)), mercure=mercure)
+    d1 = str(uuid.uuid4())
+    d2 = str(uuid.uuid4())
+    await writer._flush([
+        normalize(f"devices/{d1}/up", json.dumps({"a": 1.0}).encode()),
+        normalize(f"devices/{d1}/up", json.dumps({"b": 2.0}).encode()),
+        normalize(f"devices/{d2}/up", json.dumps({"a": 3.0}).encode()),
+    ])
+
+    assert {e["device_id"] for e in mercure.events} == {d1, d2}
+    d1_event = [e for e in mercure.events if e["device_id"] == d1][0]
+    assert len(d1_event["points"]) == 2
+
+
+async def test_flush_does_not_publish_without_mercure():
+    conn = FakeConn()
+    writer = Writer(FakeDatabase(FakePool(conn)))
+    await writer._flush([make_uplink()])
+    # no exception expected; nothing to assert
+
+
+class FakeMercurePublisher(MercurePublisher):
+    def __init__(self):
+        self.events = []
+
+    async def publish_telemetry(self, device_id, time_iso, points):
+        self.events.append({"device_id": device_id, "time": time_iso, "points": points})
 
 
 async def test_run_drains_queue_into_one_batch():
