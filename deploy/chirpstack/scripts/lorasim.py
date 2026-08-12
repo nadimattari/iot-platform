@@ -65,12 +65,16 @@ def derive_s_keys(app_key: bytes, app_nonce: bytes, net_id: bytes, dev_nonce: by
     return nwk_s_key, app_s_key
 
 
-def encrypt_frm_payload(app_s_key: bytes, dev_addr: bytes, f_cnt: int, data: bytes) -> bytes:
+def encrypt_frm_payload(app_s_key: bytes, dev_addr: bytes, f_cnt: int, data: bytes, downlink: bool = False) -> bytes:
     n = (len(data) + 15) // 16
     out = bytearray()
     for i in range(1, n + 1):
         a = bytearray(16)
         a[0] = 0x01
+        if downlink:
+            # LoRaWAN 1.0.x: octet 5 of the A-block is the direction
+            # (0x01 downlink / 0x00 uplink). ChirpStack's lrwn crate sets it.
+            a[5] = 0x01
         a[6:10] = dev_addr
         a[10:14] = struct.pack("<I", f_cnt)
         a[15] = i
@@ -80,9 +84,12 @@ def encrypt_frm_payload(app_s_key: bytes, dev_addr: bytes, f_cnt: int, data: byt
     return bytes(out)
 
 
-def uplink_phy(nwk_s_key: bytes, app_s_key: bytes, dev_addr: bytes, f_cnt: int, f_port: int, payload: bytes) -> bytes:
+def uplink_phy(nwk_s_key: bytes, app_s_key: bytes, dev_addr: bytes, f_cnt: int, f_port: int, payload: bytes, ack: bool = False) -> bytes:
     mhdr = b"\x40"
-    fhdr = dev_addr + b"\x00" + struct.pack("<H", f_cnt & 0xFFFF)
+    # LoRaWAN 1.0.x FCtrl ACK bit (bit 5, 0x20) is identical for uplink and
+    # downlink (lrwn's FCtrl decodes ack from 0x20 in both directions).
+    fctrl = b"\x20" if ack else b"\x00"
+    fhdr = dev_addr + fctrl + struct.pack("<H", f_cnt & 0xFFFF)
     enc = encrypt_frm_payload(app_s_key, dev_addr, f_cnt, payload)
     msg = mhdr + fhdr + bytes([f_port]) + enc
     b0 = bytearray(16)
@@ -120,6 +127,13 @@ def uplink_frame_json(phy: bytes, gw_id: str, freq: int, sf: int, bw: int, chann
     }
 
 
+def decrypt_downlink(app_s_key: bytes, dev_addr: bytes, f_cnt_down: int, data: bytes) -> bytes:
+    # Same construction as encrypt_frm_payload but for the downlink direction
+    # (sets the direction byte in the A-block), so "decrypting" is the same
+    # AES-CTR operation.
+    return encrypt_frm_payload(app_s_key, dev_addr, f_cnt_down, data, downlink=True)
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--broker", default=os_env("LORASIM_MQTT_HOST", "mqtt:1883"))
@@ -137,6 +151,7 @@ def main() -> int:
     p.add_argument("--f-port", type=int, default=1)
     p.add_argument("--uplinks", type=int, default=1)
     p.add_argument("--join-timeout", type=float, default=15.0)
+    p.add_argument("--listen-after", type=float, default=10.0, help="keep listening for downlinks after the uplinks")
     args = p.parse_args()
 
     app_key = bytes.fromhex(args.app_key)
@@ -146,7 +161,11 @@ def main() -> int:
     payload = bytes.fromhex(args.payload)
     gw_topic = f"{args.region}/gateway/{args.gateway_id}"
 
-    received = {}
+    class State:
+        keys = None  # (nwk_s_key, app_s_key, dev_addr)
+        acked = False
+
+    state = State()
 
     def on_command(client, userdata, msg):
         try:
@@ -154,8 +173,57 @@ def main() -> int:
         except json.JSONDecodeError:
             return
         items = df.get("items") or []
-        if items:
-            received["phy"] = base64.b64decode(items[0]["phyPayload"])
+        if not items:
+            return
+        phy = base64.b64decode(items[0]["phyPayload"])
+
+        # Send a gateway TX-ack (ChirpStack v4: gateway/<id>/event/ack) so the
+        # network-server marks a confirmed queue-item as pending; only then does
+        # a device-level ACK uplink get accepted and forwarded as event/ack.
+        client.publish(
+            f"{gw_topic}/event/ack",
+            json.dumps(
+                {
+                    "gatewayId": args.gateway_id,
+                    "downlinkId": df.get("downlinkId", 0),
+                    "items": [{"status": "OK"}],
+                }
+            ),
+        )
+
+        if state.keys is None:
+            state.pending_join_accept = phy
+            return
+
+        nwk_s_key, app_s_key, dev_addr = state.keys
+        mhdr = phy[0]
+        confirmed = mhdr & 0x20
+        dev_addr_down = phy[1:5]
+        fctrl = phy[5]
+        f_cnt_down = struct.unpack("<H", phy[6:8])[0]
+        # Skip any FHDR options (FOpts) after the counter.
+        opt_len = fctrl & 0x0F
+        idx = 8 + opt_len
+        f_port = phy[idx]
+        # The trailing 4 bytes are the MIC, not part of the FRMPayload.
+        data = decrypt_downlink(app_s_key, dev_addr_down, f_cnt_down, phy[idx + 1 : -4])
+        print(
+            f"downlink received    confirmed={bool(confirmed)} fcnt_down={f_cnt_down} fport={f_port} payload={data.hex()} raw={phy.hex()}",
+            file=sys.stderr,
+        )
+        if f_port != 0:
+            # Give the network-server a moment to process the tx-ack and mark
+            # the queue-item pending before we send the device-level ACK.
+            time.sleep(0.5)
+            state.ack_fcnt = state.fcnt_up + 1
+            ack_phy = uplink_phy(nwk_s_key, app_s_key, dev_addr, state.ack_fcnt, args.f_port, payload, ack=True)
+            client.publish(
+                f"{gw_topic}/event/up",
+                json.dumps(uplink_frame_json(ack_phy, args.gateway_id, args.freq, args.sf, 125000, args.channel, 100)),
+            )
+            state.fcnt_up = state.ack_fcnt
+            state.acked = True
+            print(f"sent ACK uplink      fcnt={state.ack_fcnt}", file=sys.stderr)
 
     broker_host, _, broker_port = args.broker.rpartition(":")
     broker_port = int(broker_port or 1883)
@@ -171,13 +239,13 @@ def main() -> int:
     print(f"sent join-request  dev_eui={args.dev_eui} gw={args.gateway_id} freq={args.freq} sf={args.sf}")
 
     deadline = time.time() + args.join_timeout
-    while time.time() < deadline and "phy" not in received:
+    while time.time() < deadline and not getattr(state, "pending_join_accept", False):
         time.sleep(0.2)
-    if "phy" not in received:
+    if not getattr(state, "pending_join_accept", False):
         print("ERROR: no join-accept downlink received", file=sys.stderr)
         return 1
 
-    plain = decrypt_join_accept(app_key, received["phy"])
+    plain = decrypt_join_accept(app_key, state.pending_join_accept)
     app_nonce = plain[0:3]
     net_id = plain[3:6]
     dev_addr = plain[6:10]
@@ -186,6 +254,9 @@ def main() -> int:
     nwk_s_key, app_s_key = derive_s_keys(app_key, app_nonce, net_id, dev_nonce)
     print(f"session keys         nwk_s_key={nwk_s_key.hex()} app_s_key={app_s_key.hex()}")
 
+    state.keys = (nwk_s_key, app_s_key, dev_addr)
+    state.fcnt_up = 0
+
     for i in range(args.uplinks):
         phy = uplink_phy(nwk_s_key, app_s_key, dev_addr, i, args.f_port, payload)
         client.publish(
@@ -193,6 +264,15 @@ def main() -> int:
             json.dumps(uplink_frame_json(phy, args.gateway_id, args.freq, args.sf, 125000, args.channel, 2 + i)),
         )
         print(f"sent uplink #{i}      fcnt={i} fport={args.f_port} payload={payload.hex()}")
+        state.fcnt_up = i
+
+    # Keep listening so a queued (confirmed) downlink can be transmitted in the
+    # RX window after an uplink and then be acknowledged by a follow-up uplink.
+    deadline = time.time() + args.listen_after
+    while time.time() < deadline and not state.acked:
+        time.sleep(0.2)
+    if not state.acked:
+        print("note: no downlink was received in time", file=sys.stderr)
 
     time.sleep(1.0)
     client.loop_stop()

@@ -12,6 +12,14 @@ parameters:
     # Path to the shared Mosquitto password file. Empty = no broker configured;
     # provisioning MQTT device credentials then fails fast (BrokerProvisioningException).
     env(MQTT_PASSWD_FILE): ''
+    # ChirpStack downlink publication (MQTT 3.1.1). Username/password are the
+    # dedicated device-mgmt service account; the topic carries the ChirpStack
+    # application ID.
+    env(MQTT_HOST): 'mosquitto'
+    env(MQTT_PORT): '1883'
+    env(MQTT_DOWNLINK_USERNAME): ''
+    env(MQTT_DOWNLINK_PASSWORD): ''
+    env(CHIRPSTACK_APPLICATION_ID): ''
 
 services:
     # default configuration for services in *this* file
@@ -34,3 +42,26 @@ services:
         class: App\Service\MosquittoCredentialProvisioner
         arguments:
             $passwdFile: '%env(MQTT_PASSWD_FILE)%'
+
+    # Downlink publisher used by DownlinkService (enqueue API).
+    App\Message\DownlinkPublisherInterface:
+        class: App\Message\MqttDownlinkPublisher
+        arguments:
+            $host: '%env(MQTT_HOST)%'
+            $port: '%env(int:MQTT_PORT)%'
+            $username: '%env(MQTT_DOWNLINK_USERNAME)%'
+            $password: '%env(MQTT_DOWNLINK_PASSWORD)%'
+
+    # DownlinkService needs the ChirpStack application ID to build the topic.
+    App\Service\DownlinkService:
+        arguments:
+            $chirpstackApplicationId: '%env(CHIRPSTACK_APPLICATION_ID)%'
+
+    # Long-running ACK/TxACK event consumer (console command).
+    App\Consumer\ConsumeDownlinkEventsCommand:
+        arguments:
+            $host: '%env(MQTT_HOST)%'
+            $port: '%env(int:MQTT_PORT)%'
+            $username: '%env(MQTT_DOWNLINK_USERNAME)%'
+            $password: '%env(MQTT_DOWNLINK_PASSWORD)%'
+            $applicationId: '%env(CHIRPSTACK_APPLICATION_ID)%'

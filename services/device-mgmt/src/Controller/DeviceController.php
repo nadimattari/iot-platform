@@ -9,6 +9,7 @@ use App\Entity\DeviceProtocol;
 use App\Entity\DeviceRepository;
 use App\Service\DeviceConflictException;
 use App\Service\DeviceService;
+use App\Service\DownlinkService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -16,6 +17,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 
+use function App\Service\serialize_command;
 use function App\Service\serialize_device;
 
 #[Route('/api/v1/devices')]
@@ -26,6 +28,7 @@ final class DeviceController extends AbstractController
 
     public function __construct(
         private readonly DeviceService $service,
+        private readonly DownlinkService $downlinks,
         private readonly DeviceRepository $devices,
     ) {
     }
@@ -110,6 +113,25 @@ final class DeviceController extends AbstractController
         $this->service->delete($this->find($id));
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+    }
+
+    #[Route('/{id}/downlink', methods: ['POST'])]
+    public function downlink(string $id, Request $request): JsonResponse
+    {
+        $device = $this->find($id);
+        $body = $this->jsonBody($request);
+
+        $fPort = isset($body['f_port']) ? (int) $body['f_port'] : 10;
+        $confirmed = $body['confirmed'] ?? false;
+        if (!is_bool($confirmed)) {
+            throw new \InvalidArgumentException('confirmed must be a boolean.');
+        }
+        $data = isset($body['data']) && is_string($body['data']) ? $body['data'] : null;
+        $object = isset($body['object']) && is_array($body['object']) ? $body['object'] : null;
+
+        $command = $this->downlinks->enqueue($device, $fPort, $confirmed, $data, $object);
+
+        return new JsonResponse(['command' => serialize_command($command)], Response::HTTP_CREATED);
     }
 
     #[Route('/{id}/claim', methods: ['POST'])]

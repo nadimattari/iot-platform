@@ -15,6 +15,7 @@
         <ini name="error_reporting" value="-1" />
         <server name="APP_ENV" value="test" force="true" />
         <server name="SHELL_VERBOSITY" value="-1" />
+        <server name="CHIRPSTACK_APPLICATION_ID" value="30248d5b-b17c-4a6c-8069-927c17486608" />
     </php>
 
     <testsuites>

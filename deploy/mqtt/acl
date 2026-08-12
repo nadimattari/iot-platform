@@ -21,6 +21,11 @@ topic readwrite devices/#
 topic readwrite modbus/#
 topic readwrite application/#
 
+# Device management (Task 16): publishes ChirpStack downlink commands and
+# consumes the ACK/TxACK events for those same devices.
+user device-mgmt
+topic readwrite application/#
+
 # Device accounts. Username == device id; each device may only publish and
 # subscribe under devices/<device-id>/#.
 pattern readwrite devices/%u/#
