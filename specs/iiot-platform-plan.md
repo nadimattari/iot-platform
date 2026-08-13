@@ -6,15 +6,17 @@ Deliver a single-tenant IIoT platform deployed per customer VPS via Docker Compo
 (ChirpStack v4) + Modbus TCP + HTTP ingestion, PostgreSQL + TimescaleDB telemetry, JWT auth, and a Vue 3 + PrimeVue 
 live dashboard. 9 containers behind Caddy + Mercure.
 
-**Status:** Tasks 1-18 complete (Phases 0-2): Docker stack, TimescaleDB bootstrap, auth (JWT), device CRUD
+**Status:** Tasks 1-19 complete (Phases 0-2): Docker stack, TimescaleDB bootstrap, auth (JWT), device CRUD
 + provisioning, MQTT broker with per-device ACLs, Caddy + Mercure edge, ingestion (MQTT subscriber,
 HTTP ingest, Modbus TCP poller, LoRaWAN uplink) → `telemetry_points`, the telemetry read API (`/telemetry`,
 `/last`, `/status`), the ChirpStack v4 LoRaWAN network server (EU868, gateway bridge UDP 1700, MQTT
 integration, admin UI), LoRaWAN confirmed downlinks with command lifecycle tracking (`event/txack` →
 `sent`, `event/ack` → `acked`, timeout → `failed`), a unified command API (`POST /devices/{id}/commands`
-routing by protocol to MQTT `devices/{id}/down` or ChirpStack, `GET /commands` history), and real-time
+routing by protocol to MQTT `devices/{id}/down` or ChirpStack, `GET /commands` history), real-time
 Mercure events (ingestion publishes per-device telemetry to `/devices/{id}`, Symfony publishes command
-status to `/devices/{id}/commands`, subscriber JWT enforced). Tasks 19-25 pending
+status to `/devices/{id}/commands`, subscriber JWT enforced), and the insights API
+(`GET /insights/summary?group_id=`, `GET /insights/timeseries?device_id=&bucket=`) over the 1m/1h/1d
+continuous aggregates. Tasks 20-25 pending
 (dashboard, hardening).
 
 ## Architecture Decisions
@@ -401,13 +403,13 @@ status to `/devices/{id}/commands`, subscriber JWT enforced). Tasks 19-25 pendin
 **Description:** 1m/1h/1d continuous aggregates (baseline from Task 2); `GET /insights/summary?group_id=` (per-field min/max/avg/count) and `GET /insights/timeseries?device_id=&bucket=`.
 
 **Acceptance criteria:**
-- [ ] Aggregates refresh automatically; summary/timeseries return correct values from them
-- [ ] Queries stay < 300ms on 30 days × few hundred devices
-- [ ] Out-of-range dates return empty, not errors
+- [x] Aggregates refresh automatically; summary/timeseries return correct values from them
+- [x] Queries stay < 300ms on 30 days × few hundred devices
+- [x] Out-of-range dates return empty, not errors
 
 **Verification:**
-- [ ] `php bin/phpunit` insights tests pass
-- [ ] Perf check on seeded data
+- [x] `php bin/phpunit` insights tests pass
+- [x] Perf check on seeded data
 
 **Dependencies:** Tasks 2, 13
 
