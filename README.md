@@ -7,7 +7,7 @@ dashboards, time-series insights, and command/downlink control.
 Each customer deploys the full stack on their own VPS via Docker Compose.
 There is no SaaS multi-tenancy.
 
-> **Status: in development.** Phases 0-2 are implemented (Tasks 1-19 of 25): the
+> **Status: in development.** Phases 0-2 are implemented (Tasks 1-20 of 25): the
 > full Docker stack boots locally, MQTT / Modbus TCP / HTTP / LoRaWAN data lands
 > in TimescaleDB behind JWT auth, a telemetry read API (`/telemetry`, `/last`,
 > `/status`) serves it, and a ChirpStack v4 network server (EU868) with a
@@ -20,7 +20,10 @@ There is no SaaS multi-tenancy.
 > present a JWT (no token → 401). An insights API
 > (`GET /insights/summary?group_id=`, `GET /insights/timeseries?device_id=&bucket=`)
 > serves per-field min/max/avg/count from the 1m/1h/1d continuous aggregates
-> (<50ms on 30 days × 300 devices). The dashboard and delivery hardening remain.
+> (<50ms on 30 days × 300 devices). A Vue 3 + PrimeVue SPA foundation is served
+> by Caddy at `/dashboard`: typed API client with transparent token refresh,
+> JWT login/logout, protected routes, and a dashboard layout shell. The live
+> device/insights views and delivery hardening remain.
 > See [`specs/iiot-platform.md`](specs/iiot-platform.md) and
 > [`specs/iiot-platform-plan.md`](specs/iiot-platform-plan.md).
 
@@ -76,9 +79,9 @@ LoRaWAN gateways); the broker and database are never exposed directly.
 ## Repository Layout
 
 ```
-specs/        → design spec + implementation plan (Tasks 1-19 checked)
+specs/        → design spec + implementation plan (Tasks 1-20 checked)
 deploy/       → docker-compose, Caddyfile, mqtt/ broker config, chirpstack/, mock-modbus/
-services/     → auth (Node/Fastify), device-mgmt (Symfony), ingestion (Python), dashboard (placeholder)
+services/     → auth (Node/Fastify), device-mgmt (Symfony), ingestion (Python), dashboard (Vue 3 SPA)
 db/           → init scripts (databases, telemetry hypertable + continuous aggregates)
 tests/        → integration + e2e (scaffolds)
 docs/         → agent/IDE setup guides
