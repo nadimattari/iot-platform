@@ -1,11 +1,20 @@
 name: iiot-platform
 
+# Task 23 hardening: keep every service's logs size-capped so a chatty
+# container can't fill the disk. Compose's x- extension allows a shared anchor.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "3"
+
 services:
   caddy:
     # dunglas/mercure is a Caddy 2 build with the Mercure module included,
     # so the edge proxy and the SSE hub are hosted in one container.
     image: dunglas/mercure:v0.24.2
     restart: unless-stopped
+    logging: *default-logging
     ports:
       - "80:80"
       - "443:443"
@@ -38,6 +47,7 @@ services:
     build:
       context: ../services/auth
     restart: unless-stopped
+    logging: *default-logging
     environment:
       PORT: 3000
       PGHOST: db
@@ -64,6 +74,7 @@ services:
     build:
       context: ../services/device-mgmt
     restart: unless-stopped
+    logging: *default-logging
     environment:
       APP_ENV: prod
       APP_SECRET: ${APP_SECRET:?APP_SECRET must be set in deploy/.env}
@@ -100,6 +111,7 @@ services:
     build:
       context: ../services/device-mgmt
     restart: unless-stopped
+    logging: *default-logging
     command: ["bin/console", "app:consume-downlink-events"]
     depends_on:
       mqtt:
@@ -136,6 +148,7 @@ services:
     build:
       context: ../services/device-mgmt
     restart: unless-stopped
+    logging: *default-logging
     command: ["bin/console", "app:consume-mqtt-acks"]
     depends_on:
       mqtt:
@@ -169,6 +182,7 @@ services:
     build:
       context: ../services/ingestion
     restart: unless-stopped
+    logging: *default-logging
     environment:
       PGHOST: db
       PGPORT: 5432
@@ -197,6 +211,7 @@ services:
   db:
     image: timescale/timescaledb:latest-pg16
     restart: unless-stopped
+    logging: *default-logging
     ports:
       - "5432:5432"
     environment:
@@ -221,6 +236,7 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    logging: *default-logging
     command: ["redis-server"]
     volumes:
       - redis_data:/data
@@ -235,6 +251,7 @@ services:
   mqtt:
     build: ./mqtt
     restart: unless-stopped
+    logging: *default-logging
     entrypoint: ["/docker-entrypoint.sh"]
     command: ["/mosquitto/entrypoint.sh"]
     environment:
@@ -266,6 +283,7 @@ services:
     # contains chirpstack.toml plus region_eu868.toml (all merged on startup).
     image: chirpstack/chirpstack:4.18.0
     restart: unless-stopped
+    logging: *default-logging
     command: ["-c", "/etc/chirpstack"]
     depends_on:
       db:
@@ -302,6 +320,7 @@ services:
     # the Network Server gateway backend (region_eu868.toml).
     image: chirpstack/chirpstack-gateway-bridge:4
     restart: unless-stopped
+    logging: *default-logging
     # No command: the default config path is
     # /etc/chirpstack-gateway-bridge/chirpstack-gateway-bridge.toml (matches
     # the mount below). Unlike chirpstack, -c expects a file, not a directory.
@@ -324,6 +343,13 @@ services:
     networks:
       - backend
       - frontend
+    healthcheck:
+      # Long-lived process; verify the bridge worker is still running.
+      test: ["CMD-SHELL", "ps -eo args | grep -v grep | grep -q 'chirpstack-gateway-bridge' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   chirpstack-rest-api:
     # REST facade over the ChirpStack gRPC API. The platform (device-mgmt)
@@ -332,6 +358,7 @@ services:
     # inside the internal network (see Task 23 hardening).
     image: chirpstack/chirpstack-rest-api:4
     restart: unless-stopped
+    logging: *default-logging
     command: ["--server", "chirpstack:8080", "--bind", "0.0.0.0:8090", "--insecure"]
     depends_on:
       chirpstack:
@@ -342,11 +369,19 @@ services:
     networks:
       - backend
       - frontend
+    healthcheck:
+      # gRPC-gateway proxy; verify the worker process is alive.
+      test: ["CMD-SHELL", "ps -eo args | grep -v grep | grep -q 'chirpstack-rest-api' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   dashboard:
     build:
       context: ../services/dashboard
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - frontend
     healthcheck:

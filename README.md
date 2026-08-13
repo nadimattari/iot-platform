@@ -7,7 +7,7 @@ dashboards, time-series insights, and command/downlink control.
 Each customer deploys the full stack on their own VPS via Docker Compose.
 There is no SaaS multi-tenancy.
 
-> **Status: in development.** Phases 0-2 are implemented (Tasks 1-22 of 25): the
+> **Status: in development.** Phases 0-3 are implemented (Tasks 1-23 of 25): the
 > full Docker stack boots locally, MQTT / Modbus TCP / HTTP / LoRaWAN data lands
 > in TimescaleDB behind JWT auth, a telemetry read API (`/telemetry`, `/last`,
 > `/status`) serves it, and a ChirpStack v4 network server (EU868) with a
@@ -32,7 +32,11 @@ There is no SaaS multi-tenancy.
 > cards (min/max/avg/count) and per-device multi-field timeseries from
 > `/insights/summary` and `/insights/timeseries`, with a device-group picker
 > backed by a new `GET /api/v1/groups` endpoint; both views handle loading and
-> empty states. Delivery hardening and deployment checks remain.
+> empty states. Deployment hardening (Task 23) adds healthchecks + log rotation
+> to every container, automated TimescaleDB-aware backup/restore scripts
+> (`deploy/backup/`), and a provisioning runbook (`deploy/runbook.md`) covering
+> DNS, firewall/ports (80/443, UDP 1700), Caddy auto-TLS, upgrades, and
+> restore-onto-a-fresh-stack. The E2E suite and VPS acceptance run remain.
 > See [`specs/iiot-platform.md`](specs/iiot-platform.md) and
 > [`specs/iiot-platform-plan.md`](specs/iiot-platform-plan.md).
 
@@ -88,7 +92,7 @@ LoRaWAN gateways); the broker and database are never exposed directly.
 ## Repository Layout
 
 ```
-specs/        → design spec + implementation plan (Tasks 1-22 checked)
+specs/        → design spec + implementation plan (Tasks 1-23 checked)
 deploy/       → docker-compose, Caddyfile, mqtt/ broker config, chirpstack/, mock-modbus/
 services/     → auth (Node/Fastify), device-mgmt (Symfony), ingestion (Python), dashboard (Vue 3 SPA)
 db/           → init scripts (databases, telemetry hypertable + continuous aggregates)

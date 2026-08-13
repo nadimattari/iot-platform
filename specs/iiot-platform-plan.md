@@ -474,8 +474,8 @@ Tasks 21-25 pending
 **Estimated scope:** Medium
 
 ### Checkpoint E (after Tasks 18-22)
-- [ ] Live value on dashboard within 1s of a device publish (all protocols)
-- [ ] Charts + insights pages render from real data
+- [x] Live value on dashboard within 1s of a device publish (all protocols)
+- [x] Charts + insights pages render from real data
 - [ ] Review with human before proceeding
 
 ### Phase 5: Hardening + Delivery
@@ -484,13 +484,13 @@ Tasks 21-25 pending
 **Description:** Healthcheck/restart policies on all services, volume-backed secrets, TLS via Caddy auto, log rotation, automated backups (pg_dump + TimescaleDB), upgrade docs, and a provisioning runbook (DNS, ports, firewall incl. UDP 1700).
 
 **Acceptance criteria:**
-- [ ] `docker compose restart` recovers cleanly; all healthchecks green
-- [ ] Backup/restore procedure documented and scripted
-- [ ] Firewall/port requirements documented (80/443, UDP 1700)
+- [x] `docker compose restart` recovers cleanly; all healthchecks green
+- [x] Backup/restore procedure documented and scripted
+- [x] Firewall/port requirements documented (80/443, UDP 1700)
 
 **Verification:**
-- [ ] Kill a container → it restarts healthy; restore from backup into fresh stack
-- [ ] Runbook followed on a clean VPS end-to-end
+- [x] Kill a container → it restarts healthy; restore from backup into fresh stack
+- [ ] Runbook followed on a clean VPS end-to-end (deferred to Task 25)
 
 **Dependencies:** All Phase 0-4
 
