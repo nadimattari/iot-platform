@@ -476,7 +476,7 @@ Tasks 21-25 pending
 ### Checkpoint E (after Tasks 18-22)
 - [x] Live value on dashboard within 1s of a device publish (all protocols)
 - [x] Charts + insights pages render from real data
-- [ ] Review with human before proceeding
+- [x] Review with human before proceeding
 
 ### Phase 5: Hardening + Delivery
 
