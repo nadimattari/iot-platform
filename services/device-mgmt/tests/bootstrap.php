@@ -44,6 +44,42 @@ CREATE INDEX IF NOT EXISTS idx_telemetry_points_device_time
     ON telemetry.telemetry_points (device_id, time DESC);
 CREATE INDEX IF NOT EXISTS idx_telemetry_points_field_time
     ON telemetry.telemetry_points (field, time DESC);
+CREATE MATERIALIZED VIEW IF NOT EXISTS telemetry.telemetry_1m
+WITH (timescaledb.continuous) AS
+SELECT time_bucket('1 minute', time)                    AS bucket,
+       device_id,
+       field,
+       COUNT(*) AS count,
+       MIN(value) AS min,
+       MAX(value) AS max,
+       AVG(value) AS avg
+FROM telemetry.telemetry_points
+GROUP BY bucket, device_id, field
+WITH NO DATA;
+CREATE MATERIALIZED VIEW IF NOT EXISTS telemetry.telemetry_1h
+WITH (timescaledb.continuous) AS
+SELECT time_bucket('1 hour', time)                      AS bucket,
+       device_id,
+       field,
+       COUNT(*) AS count,
+       MIN(value) AS min,
+       MAX(value) AS max,
+       AVG(value) AS avg
+FROM telemetry.telemetry_points
+GROUP BY bucket, device_id, field
+WITH NO DATA;
+CREATE MATERIALIZED VIEW IF NOT EXISTS telemetry.telemetry_1d
+WITH (timescaledb.continuous) AS
+SELECT time_bucket('1 day', time)                       AS bucket,
+       device_id,
+       field,
+       COUNT(*) AS count,
+       MIN(value) AS min,
+       MAX(value) AS max,
+       AVG(value) AS avg
+FROM telemetry.telemetry_points
+GROUP BY bucket, device_id, field
+WITH NO DATA;
 SQL);
 } catch (PDOException $e) {
     fwrite(STDERR, sprintf("WARNING: could not prepare telemetry schema for tests: %s\n", $e->getMessage()));
