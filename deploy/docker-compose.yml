@@ -1,12 +1,5 @@
 name: iiot-platform
 
-x-app-placeholder: &app-placeholder
-  restart: unless-stopped
-  entrypoint: ["sleep", "infinity"]
-  networks:
-    - frontend
-    - backend
-
 services:
   caddy:
     # dunglas/mercure is a Caddy 2 build with the Mercure module included,
@@ -26,7 +19,6 @@ services:
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./caddy/mercure/Caddyfile:/etc/caddy/mercure/Caddyfile:ro
-      - ./caddy/static:/srv/dashboard:ro
       - caddy_data:/data
       - caddy_config:/config
       - mercure_data:/data/mercure
@@ -351,8 +343,17 @@ services:
       - frontend
 
   dashboard:
-    image: nginx:alpine
-    <<: *app-placeholder
+    build:
+      context: ../services/dashboard
+    restart: unless-stopped
+    networks:
+      - frontend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
 
 networks:
   frontend:

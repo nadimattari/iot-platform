@@ -26,11 +26,11 @@
 		reverse_proxy ingestion:8000
 	}
 
-	# Dashboard SPA placeholder (real Vue 3 SPA lands in Tasks 21-22).
+	# Dashboard SPA (Vue 3 + PrimeVue, built into the dashboard container).
+	# The prefix is stripped so nginx serves the app at its root; client-side
+	# routing falls back to index.html in nginx.
 	handle_path /dashboard* {
-		root * /srv/dashboard
-		try_files {path} /index.html
-		file_server
+		reverse_proxy dashboard:80
 	}
 
 	# Mercure SSE hub: topic ACLs are enforced via the `publish`/`subscribe`
