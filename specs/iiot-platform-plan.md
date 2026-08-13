@@ -441,13 +441,13 @@ Tasks 21-25 pending
 **Description:** Device list (pagination, protocol filter, online status), device detail with provisioning/claim form, enable/disable, live values updated via Mercure SSE subscription.
 
 **Acceptance criteria:**
-- [ ] Device list/detail render from API; create/claim/enable/disable work from UI
-- [ ] Live values update in place on SSE event, no page reload
-- [ ] Online/offline state derived from `/status`
+- [x] Device list/detail render from API; create/claim/enable/disable work from UI
+- [x] Live values update in place on SSE event, no page reload
+- [x] Online/offline state derived from `/status`
 
 **Verification:**
-- [ ] `npm run test:unit` (component tests) passes
-- [ ] Manual: create device, publish data, watch value update live
+- [x] `npm run test:unit` (component tests) passes
+- [x] Manual: create device, publish data, watch value update live
 
 **Dependencies:** Tasks 13, 18, 20
 
