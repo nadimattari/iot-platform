@@ -169,7 +169,7 @@ describe('POST /auth/logout', () => {
 });
 
 describe('GET /auth/mercure-token', () => {
-  it('mints an HS256 subscriber token with the /devices/* topic selector', async () => {
+  it('mints an HS256 subscriber token with the /devices/{id} topic selector', async () => {
     const app = await makeApp();
     const login = await app.inject({
       method: 'POST',
@@ -193,7 +193,7 @@ describe('GET /auth/mercure-token', () => {
       mercure?: { subscribe?: string[] };
       exp?: number;
     };
-    expect(payload.mercure?.subscribe).toContain('/devices/*');
+    expect(payload.mercure?.subscribe).toContain('/devices/{id}');
     expect(payload.exp).toBeGreaterThan(Math.floor(Date.now() / 1000));
     await app.close();
   });

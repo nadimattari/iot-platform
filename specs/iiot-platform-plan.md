@@ -17,9 +17,11 @@ Mercure events (ingestion publishes per-device telemetry to `/devices/{id}`, Sym
 status to `/devices/{id}/commands`, subscriber JWT enforced), the insights API
 (`GET /insights/summary?group_id=`, `GET /insights/timeseries?device_id=&bucket=`) over the 1m/1h/1d
 continuous aggregates, and the Vue 3 + PrimeVue dashboard foundation (typed API client with token
-refresh, login/logout, protected routes, layout shell, served by Caddy at `/dashboard`).
-Tasks 21-25 pending
-(device list/detail, charts + insights pages, hardening).
+refresh, login/logout, protected routes, layout shell, served by Caddy at `/dashboard`),
+deployment hardening (healthchecks + log rotation, backup/restore, provisioning runbook),
+and the E2E test suite (Task 24: compose test profile with mock MQTT/Modbus/HTTP/LoRaWAN
+drivers asserting ingest → TSDB → API → Mercure(SSE), run in CI).
+Task 25 pending (VPS acceptance validation).
 
 ## Architecture Decisions
 
@@ -502,13 +504,13 @@ Tasks 21-25 pending
 **Description:** Compose test profile spins up the stack with mock devices for all 4 protocols; asserts ingest → TSDB → API → dashboard (SSE) flow; CI job runs it.
 
 **Acceptance criteria:**
-- [ ] Mock MQTT, Modbus (pymodbus server), HTTP, and LoRaWAN (fake ChirpStack uplink) drivers exist
-- [ ] E2E asserts telemetry visible in API and SSE stream
-- [ ] Runs green in CI on push/PR
+- [x] Mock MQTT, Modbus (pymodbus server), HTTP, and LoRaWAN (fake ChirpStack uplink) drivers exist
+- [x] E2E asserts telemetry visible in API and SSE stream
+- [x] Runs green in CI on push/PR
 
 **Verification:**
-- [ ] `docker compose -f deploy/docker-compose.test.yml up --exit-code-from e2e` passes
-- [ ] CI badge green
+- [x] `docker compose -f deploy/docker-compose.test.yml up --exit-code-from e2e` passes
+- [x] CI badge green
 
 **Dependencies:** All Phase 0-4
 

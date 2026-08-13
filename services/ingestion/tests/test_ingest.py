@@ -71,6 +71,7 @@ def make_client(dev_row, field_defs=None):
         pg_port=1,
         pool_min_size=1,
         pool_max_size=1,
+        pg_connect_timeout_secs=0,
         mqtt_enabled=False,
     )
     client = TestClient(create_app(settings))
@@ -117,6 +118,17 @@ async def test_fetch_device_returns_identity():
     row = device_row()
     identity = await fetch_device(FakePool(row), row["id"])
     assert identity == DeviceIdentity(row["id"], True, GOOD_HASH, {})
+
+
+async def test_fetch_device_normalizes_uuid_to_str():
+    """asyncpg returns UUID columns as uuid.UUID; the identity must be a str
+    so HTTP-ingested points serialize in the Mercure SSE payload."""
+    raw = uuid.uuid4()
+    row = device_row()
+    row["id"] = raw
+    identity = await fetch_device(FakePool(row), str(raw))
+    assert identity.device_id == str(raw)
+    assert isinstance(identity.device_id, str)
 
 
 async def test_fetch_device_returns_none_when_missing_or_db_down():
@@ -256,6 +268,7 @@ def test_lifespan_exposes_db_and_writer_on_app_state():
         pg_port=1,
         pool_min_size=1,
         pool_max_size=1,
+        pg_connect_timeout_secs=0,
         mqtt_enabled=False,
     )
     with TestClient(create_app(settings)) as client:

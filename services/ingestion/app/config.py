@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     # --- asyncpg pool --------------------------------------------------------
     pool_min_size: int = 1
     pool_max_size: int = 10
+    # How long open() keeps retrying to reach PostgreSQL before giving up.
+    # None (default) waits indefinitely — the service cannot ingest without its
+    # database — while the tests set a small value to boot without one.
+    pg_connect_timeout_secs: float | None = None
+    # Backoff between pool-open attempts.
+    pg_retry_interval_secs: float = 5.0
 
     # --- MQTT broker (Task 10) -------------------------------------------------
     mqtt_enabled: bool = True

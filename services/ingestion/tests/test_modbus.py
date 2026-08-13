@@ -5,6 +5,7 @@ decoding, error isolation and config reload are tested without I/O.
 """
 
 import asyncio
+import uuid
 
 from app.config import Settings
 from app.modbus import (
@@ -108,6 +109,31 @@ async def test_load_groups_registers_and_resolves_connection():
 
     conn2, regs2 = groups["d2"]
     assert conn2 == ModbusConnection("gw", 502, 1)
+
+
+async def test_load_normalizes_uuid_device_id_to_str():
+    """asyncpg returns UUID columns as uuid.UUID; group keys must stay strings
+    so the poller's `modbus/{id}/up` topic serializes cleanly."""
+
+    class Pool:
+        async def fetch(self, sql, *args):
+            return [
+                {
+                    "device_id": uuid.UUID("019feb7d-1111-2222-3333-444455556666"),
+                    "metadata": '{"modbus_host": "plc-1"}',
+                    "name": "x",
+                    "address": 0,
+                    "datatype": "uint16",
+                    "byteorder": "big",
+                    "scale": 1.0,
+                    "interval_secs": 10,
+                }
+            ]
+
+    groups = await load_register_configs(Pool(), settings(modbus_default_host="gw"))
+
+    assert "019feb7d-1111-2222-3333-444455556666" in groups
+    assert all(isinstance(key, str) for key in groups)
 
 
 async def test_load_skips_devices_without_host():

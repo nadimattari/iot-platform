@@ -219,6 +219,7 @@ async def load_register_configs(
 
     devices: dict[str, dict[str, Any]] = {}
     for row in rows:
+        device_id = str(row["device_id"])
         try:
             register = RegisterConfig(
                 name=row["name"],
@@ -239,7 +240,7 @@ async def load_register_configs(
             logger.warning("skipping malformed modbus register config: %r", row)
             continue
         entry = devices.setdefault(
-            row["device_id"], {"metadata": row["metadata"], "registers": []}
+            device_id, {"metadata": row["metadata"], "registers": []}
         )
         entry["registers"].append(register)
 

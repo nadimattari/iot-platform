@@ -130,6 +130,46 @@ class FakeMercurePublisher(MercurePublisher):
         self.events.append({"device_id": device_id, "time": time_iso, "points": points})
 
 
+class ExplodingMercurePublisher(FakeMercurePublisher):
+    async def publish_telemetry(self, device_id, time_iso, points):
+        raise RuntimeError("hub exploded")
+
+
+async def test_flush_survives_publisher_crash():
+    """A failed Mercure publish must not kill the writer task."""
+    conn = FakeConn()
+    writer = Writer(FakeDatabase(FakePool(conn)), mercure=ExplodingMercurePublisher())
+
+    await writer._flush([make_uplink()])  # must not raise
+
+
+class FailingDeviceMercurePublisher(FakeMercurePublisher):
+    def __init__(self, failing_device: str):
+        super().__init__()
+        self._failing_device = failing_device
+
+    async def publish_telemetry(self, device_id, time_iso, points):
+        if device_id == self._failing_device:
+            raise RuntimeError("boom")
+        await super().publish_telemetry(device_id, time_iso, points)
+
+
+async def test_publish_failure_for_one_device_does_not_block_others():
+    """A failing device's SSE event must not swallow other devices' events."""
+    conn = FakeConn()
+    d1 = str(uuid.uuid4())
+    d2 = str(uuid.uuid4())
+    mercure = FailingDeviceMercurePublisher(d1)
+    writer = Writer(FakeDatabase(FakePool(conn)), mercure=mercure)
+
+    await writer._flush([
+        normalize(f"devices/{d1}/up", json.dumps({"a": 1.0}).encode()),
+        normalize(f"devices/{d2}/up", json.dumps({"a": 3.0}).encode()),
+    ])
+
+    assert [e["device_id"] for e in mercure.events] == [d2]
+
+
 async def test_run_drains_queue_into_one_batch():
     conn = FakeConn()
     writer = Writer(FakeDatabase(FakePool(conn)), batch_size=100, batch_timeout=0.05)

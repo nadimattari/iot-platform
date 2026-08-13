@@ -1,5 +1,7 @@
 # Self-hosted IIoT Platform
 
+[![E2E](https://github.com/nadimattari/iot-platform/actions/workflows/e2e.yml/badge.svg)](https://github.com/nadimattari/iot-platform/actions/workflows/e2e.yml)
+
 A single-tenant, self-hosted industrial IoT platform: connect, monitor, and
 control devices over **MQTT, LoRaWAN, Modbus TCP, and HTTP/REST**, with live
 dashboards, time-series insights, and command/downlink control.
@@ -7,7 +9,7 @@ dashboards, time-series insights, and command/downlink control.
 Each customer deploys the full stack on their own VPS via Docker Compose.
 There is no SaaS multi-tenancy.
 
-> **Status: in development.** Phases 0-3 are implemented (Tasks 1-23 of 25): the
+> **Status: in development.** Phases 0-3 are implemented (Tasks 1-24 of 25): the
 > full Docker stack boots locally, MQTT / Modbus TCP / HTTP / LoRaWAN data lands
 > in TimescaleDB behind JWT auth, a telemetry read API (`/telemetry`, `/last`,
 > `/status`) serves it, and a ChirpStack v4 network server (EU868) with a
@@ -36,7 +38,10 @@ There is no SaaS multi-tenancy.
 > to every container, automated TimescaleDB-aware backup/restore scripts
 > (`deploy/backup/`), and a provisioning runbook (`deploy/runbook.md`) covering
 > DNS, firewall/ports (80/443, UDP 1700), Caddy auto-TLS, upgrades, and
-> restore-onto-a-fresh-stack. The E2E suite and VPS acceptance run remain.
+> restore-onto-a-fresh-stack. The E2E suite (Task 24) spins up the stack in a
+> compose test profile (`deploy/docker-compose.test.yml`) with mock devices for
+> all four protocols and asserts ingest → TSDB → API → Mercure(SSE) in CI
+> (`.github/workflows/e2e.yml`). The VPS acceptance run remains.
 > See [`specs/iiot-platform.md`](specs/iiot-platform.md) and
 > [`specs/iiot-platform-plan.md`](specs/iiot-platform-plan.md).
 
@@ -92,7 +97,7 @@ LoRaWAN gateways); the broker and database are never exposed directly.
 ## Repository Layout
 
 ```
-specs/        → design spec + implementation plan (Tasks 1-23 checked)
+specs/        → design spec + implementation plan (Tasks 1-24 checked)
 deploy/       → docker-compose, Caddyfile, mqtt/ broker config, chirpstack/, mock-modbus/
 services/     → auth (Node/Fastify), device-mgmt (Symfony), ingestion (Python), dashboard (Vue 3 SPA)
 db/           → init scripts (databases, telemetry hypertable + continuous aggregates)

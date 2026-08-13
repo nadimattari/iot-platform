@@ -91,7 +91,11 @@ export class MercureHub {
 
   private open(topics: string[]): void {
     const params = new URLSearchParams()
-    for (const topic of topics) params.append('topic', topic)
+    for (const topic of topics) {
+      // Mercure matches `topic=` values exactly (globs are not expanded);
+      // the all-devices subscription must use its URI-template form.
+      params.append('topic', topic === '/devices/*' ? '/devices/{id}' : topic)
+    }
 
     const source = new EventSource(`/.well-known/mercure?${params.toString()}`)
     this.es = source

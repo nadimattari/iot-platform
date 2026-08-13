@@ -202,7 +202,9 @@ services:
       - frontend
       - backend
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8000/health"]
+      # Healthy only when the DB pool is connected; /health always returns 200
+      # (status body carries the db field), so grep the body.
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8000/health | grep -q '\"db\":\"connected\"' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -227,7 +229,11 @@ services:
       - frontend
       - backend
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      # Force TCP: `pg_isready` without -h checks the local Unix socket, which
+      # answers during the docker-entrypoint init phase while TCP is still
+      # closed — letting TCP clients (auth, migrate, device-mgmt, ingestion)
+      # start too early and fail with ECONNREFUSED.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5

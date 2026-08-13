@@ -1,10 +1,11 @@
 import asyncio
 import json
+import logging
 import uuid
 from types import SimpleNamespace
 
 from app.devices import resolve_device_id
-from app.main import make_handler
+from app.main import make_handler, supervise
 from app.normalizer import normalize
 
 
@@ -45,6 +46,13 @@ async def test_resolve_device_id_returns_matching_device():
 async def test_resolve_device_id_returns_none_on_miss_or_error():
     assert await resolve_device_id(FakePool(result=None), "X") is None
     assert await resolve_device_id(FakePool(error=True), "X") is None
+
+
+async def test_resolve_device_id_normalizes_uuid_to_str():
+    """asyncpg returns UUID columns as uuid.UUID; the id must stay a string
+    for the rest of the pipeline (topics, DB COPY, Mercure JSON payloads)."""
+    raw = uuid.uuid4()
+    assert await resolve_device_id(FakePool(result={"id": raw}), "X") == str(raw)
 
 
 async def test_pipeline_forwards_mqtt_uplink_unchanged():
@@ -89,3 +97,20 @@ async def test_pipeline_quarantines_unparseable_payload():
     msg = SimpleNamespace(topic=f"devices/{uuid.uuid4()}/up", payload=b"not json")
     await handler(msg)
     assert writer.puts == []
+
+
+async def test_supervise_logs_task_crash(caplog):
+    """A crashed background task must surface its exception in the logs."""
+
+    async def boom() -> None:
+        raise RuntimeError("kaboom")
+
+    with caplog.at_level(logging.ERROR, logger="app.main"):
+        task = supervise(asyncio.create_task(boom()), "writer")
+        await asyncio.sleep(0)
+        assert task.exception() is not None
+        await asyncio.sleep(0)
+
+    assert any(
+        "writer task crashed: kaboom" in record.message for record in caplog.records
+    )

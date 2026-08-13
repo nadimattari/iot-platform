@@ -48,7 +48,7 @@ describe('MercureHub', () => {
 
     const es = FakeEventSource.instances[0]
     expect(es.url).toContain('/.well-known/mercure')
-    expect(es.url).toContain('topic=%2Fdevices%2F*')
+    expect(es.url).toContain('topic=%2Fdevices%2F%7Bid%7D')
     expect(document.cookie).toContain('mercureAuthorization=jwt-1')
 
     hub.disconnect()

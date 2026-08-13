@@ -1,0 +1,32 @@
+name: E2E
+
+# Full-stack end-to-end suite (Task 24): boots the compose test profile with
+# mock devices for MQTT / Modbus / HTTP / LoRaWAN and asserts the ingest ->
+# TimescaleDB -> API -> Mercure(SSE) flow. The e2e container's exit code is
+# propagated by --exit-code-from, so a single failed check fails the job.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    name: E2E suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create environment config
+        run: cp deploy/.env.example deploy/.env
+
+      - name: Run E2E suite
+        run: docker compose -f deploy/docker-compose.test.yml up --build --exit-code-from e2e
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose -f deploy/docker-compose.test.yml logs --tail 200
+
+      - name: Tear down test stack
+        if: always()
+        run: docker compose -f deploy/docker-compose.test.yml down -v

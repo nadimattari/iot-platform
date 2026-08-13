@@ -25,6 +25,26 @@ from .writer import Writer
 logger = logging.getLogger(__name__)
 
 
+def supervise(task: asyncio.Task, name: str) -> asyncio.Task:
+    """Log a background task's terminal exception so it never dies silently.
+
+    A task created with `create_task` only reports its exception when garbage
+    collected; the lifespan keeps references, so without this a crashed writer
+    or poller would stall the pipeline with no trace. `exc_info` is captured in
+    the callback to render the full traceback.
+    """
+
+    def _done(completed: asyncio.Task) -> None:
+        if completed.cancelled():
+            return
+        exc = completed.exception()
+        if exc is not None:
+            logger.error("%s task crashed: %s", name, exc, exc_info=exc)
+
+    task.add_done_callback(_done)
+    return task
+
+
 def make_handler(
     db: Database,
     writer: Writer,
@@ -71,19 +91,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             mercure=mercure,
         )
         app.state.writer = writer
-        writer_task = asyncio.create_task(writer.run())
+        writer_task = supervise(asyncio.create_task(writer.run()), "writer")
 
         subscriber_task: asyncio.Task[None] | None = None
         if settings.mqtt_enabled:
             subscriber = MqttSubscriber(settings, make_handler(db, writer))
-            subscriber_task = asyncio.create_task(subscriber.run())
+            subscriber_task = supervise(asyncio.create_task(subscriber.run()), "mqtt subscriber")
 
         modbus_task: asyncio.Task[None] | None = None
         if settings.modbus_enabled:
             from .modbus import ModbusPoller, MqttPublisher
 
             poller = ModbusPoller(db.pool, MqttPublisher(settings), settings)
-            modbus_task = asyncio.create_task(poller.run())
+            modbus_task = supervise(asyncio.create_task(poller.run()), "modbus poller")
 
         try:
             yield

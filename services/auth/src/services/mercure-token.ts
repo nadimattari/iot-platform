@@ -17,7 +17,7 @@ export interface MercureTokenService {
 export function createMercureTokenService(
   subscriberKey: string,
   ttlSeconds = 3600,
-  topics: string[] = ['/devices/*'],
+  topics: string[] = ['/devices/{id}'],
 ): MercureTokenService | null {
   if (subscriberKey.length === 0) return null;
 

@@ -95,12 +95,30 @@ class Writer:
             logger.exception("write batch of %d uplink(s) failed", len(batch))
             return
 
-        await self._publish_events(point_rows)
+        try:
+            await self._publish_events(point_rows)
+        except Exception:
+            # A publishing failure must never stall the telemetry pipeline: the
+            # points are already durable in TimescaleDB, so log and move on.
+            logger.exception("mercure event publishing failed for %d point(s)", len(point_rows))
 
     async def _publish_events(self, point_rows: list[tuple[Any, ...]]) -> None:
         """Push one Mercure event per device in the batch, after a successful write."""
         if self._mercure is None or not point_rows:
             return
         time_iso = point_rows[0][0].isoformat()
+        # Each device is published in its own try/except: a serialization or
+        # transport failure for one device must not swallow the other devices'
+        # events in the same write batch.
         for device_id, points in telemetry_points_by_device(point_rows).items():
-            await self._mercure.publish_telemetry(device_id, time_iso, points)
+            try:
+                await self._mercure.publish_telemetry(device_id, time_iso, points)
+                logger.info(
+                    "mercure published %d point(s) to /devices/%s",
+                    len(points),
+                    device_id,
+                )
+            except Exception:
+                logger.exception(
+                    "mercure event publishing failed for device %r", device_id
+                )

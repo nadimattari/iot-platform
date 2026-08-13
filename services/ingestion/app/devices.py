@@ -47,7 +47,9 @@ async def resolve_device_id(pool: asyncpg.Pool, dev_eui: str) -> str | None:
     except Exception:
         logger.warning("device lookup failed for dev_eui %r", dev_eui, exc_info=True)
         return None
-    return row["id"] if row is not None else None
+    # asyncpg returns the UUID column as uuid.UUID; normalize to str so the id
+    # stays a string through the whole pipeline (topics, DB COPY, Mercure JSON).
+    return str(row["id"]) if row is not None else None
 
 
 async def fetch_device(pool: asyncpg.Pool, device_id: str) -> DeviceIdentity | None:
@@ -64,7 +66,7 @@ async def fetch_device(pool: asyncpg.Pool, device_id: str) -> DeviceIdentity | N
         return None
     metadata = parse_json(row["metadata"])
     return DeviceIdentity(
-        device_id=row["id"],
+        device_id=str(row["id"]),
         enabled=row["enabled"],
         api_key_hash=row["api_key_hash"],
         metadata=metadata if isinstance(metadata, dict) else {},
