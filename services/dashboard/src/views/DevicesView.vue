@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import DataTable from 'primevue/datatable'
+import Button from 'primevue/button'
 import Column from 'primevue/column'
+import DataTable from 'primevue/datatable'
+import Dialog from 'primevue/dialog'
+import InputText from 'primevue/inputtext'
+import Message from 'primevue/message'
 import Paginator from 'primevue/paginator'
 import Select from 'primevue/select'
 import Tag from 'primevue/tag'
-import Button from 'primevue/button'
-import Message from 'primevue/message'
+import Textarea from 'primevue/textarea'
+import { createDevice } from '@/api/devices'
 import { mercure } from '@/mercure/client'
 import { useDevicesStore } from '@/stores/devices'
 import DeviceStatusTag from '@/components/DeviceStatusTag.vue'
@@ -25,6 +29,15 @@ const protocolOptions = [
   { label: 'HTTP', value: 'http' },
 ]
 
+const createOptions = protocolOptions.slice(1)
+
+const showCreate = ref(false)
+const createName = ref('')
+const createProtocol = ref('mqtt')
+const createMetadata = ref('{}')
+const creating = ref(false)
+const createError = ref<string | null>(null)
+
 function onLive(event: LiveEvent): void {
   if ('points' in event) store.applyLive(event)
 }
@@ -39,6 +52,53 @@ function changePage(page: number): void {
 
 function changeProtocol(protocol: string): void {
   void store.loadList({ page: 1, protocol })
+}
+
+function openCreate(): void {
+  createName.value = ''
+  createProtocol.value = 'mqtt'
+  createMetadata.value = '{}'
+  createError.value = null
+  showCreate.value = true
+}
+
+async function submitCreate(): Promise<void> {
+  createError.value = null
+  if (!createName.value.trim()) {
+    createError.value = 'Name is required.'
+    return
+  }
+  let metadata: Record<string, unknown> = {}
+  if (createMetadata.value.trim()) {
+    try {
+      const parsed = JSON.parse(createMetadata.value) as unknown
+      if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        createError.value = 'Metadata must be a JSON object.'
+        return
+      }
+      metadata = parsed as Record<string, unknown>
+    } catch {
+      createError.value = 'Metadata must be valid JSON.'
+      return
+    }
+  }
+  creating.value = true
+  try {
+    const { device, api_key } = await createDevice({
+      name: createName.value.trim(),
+      protocol: createProtocol.value,
+      metadata,
+    })
+    showCreate.value = false
+    if (api_key && device.protocol !== 'lorawan') {
+      alert(`Device created.\n\nAPI key (shown once): ${api_key}`)
+    }
+    await store.loadList({ page: 1 })
+  } catch (error) {
+    createError.value = error instanceof Error ? error.message : 'Failed to create device.'
+  } finally {
+    creating.value = false
+  }
 }
 
 onMounted(() => {
@@ -57,15 +117,46 @@ onUnmounted(() => {
         <h1 class="devices__title">Devices</h1>
         <p class="devices__subtitle">Provisioned devices and their live telemetry.</p>
       </div>
-      <Select
-        :model-value="store.protocol"
-        :options="protocolOptions"
-        option-label="label"
-        option-value="value"
-        placeholder="Filter by protocol"
-        @update:model-value="changeProtocol"
-      />
+      <div class="devices__actions">
+        <Select
+          :model-value="store.protocol"
+          :options="protocolOptions"
+          option-label="label"
+          option-value="value"
+          placeholder="Filter by protocol"
+          @update:model-value="changeProtocol"
+        />
+        <Button label="New device" icon="pi pi-plus" @click="openCreate" />
+      </div>
     </header>
+
+    <Dialog v-model:visible="showCreate" header="New device" modal :closable="false">
+      <form class="devices__create" @submit.prevent="submitCreate">
+        <div class="field">
+          <label for="create-name">Name</label>
+          <InputText id="create-name" v-model="createName" placeholder="e.g. cooling-pump-2" />
+        </div>
+        <div class="field">
+          <label for="create-protocol">Protocol</label>
+          <Select
+            id="create-protocol"
+            v-model="createProtocol"
+            :options="createOptions"
+            option-label="label"
+            option-value="value"
+          />
+        </div>
+        <div class="field">
+          <label for="create-metadata">Metadata (optional JSON)</label>
+          <Textarea id="create-metadata" v-model="createMetadata" rows="4" class="mono" />
+        </div>
+        <Message v-if="createError" severity="error" :closable="false">{{ createError }}</Message>
+        <div class="devices__create-actions">
+          <Button type="button" label="Cancel" severity="secondary" @click="showCreate = false" />
+          <Button type="submit" :loading="creating" label="Create" icon="pi pi-check" />
+        </div>
+      </form>
+    </Dialog>
 
     <Message v-if="store.error" severity="error" :closable="false">{{ store.error }}</Message>
 
@@ -150,6 +241,33 @@ onUnmounted(() => {
 .devices__subtitle {
   margin: 0.25rem 0 0;
   color: var(--p-text-muted-color);
+}
+.devices__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.devices__create {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.devices__create .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.devices__create .field label {
+  font-size: 0.85rem;
+  color: var(--p-text-muted-color);
+}
+.devices__create-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+.mono {
+  font-family: var(--font-mono);
 }
 .devices__name {
   background: none;
