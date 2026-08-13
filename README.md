@@ -7,7 +7,7 @@ dashboards, time-series insights, and command/downlink control.
 Each customer deploys the full stack on their own VPS via Docker Compose.
 There is no SaaS multi-tenancy.
 
-> **Status: in development.** Phases 0-2 are implemented (Tasks 1-21 of 25): the
+> **Status: in development.** Phases 0-2 are implemented (Tasks 1-22 of 25): the
 > full Docker stack boots locally, MQTT / Modbus TCP / HTTP / LoRaWAN data lands
 > in TimescaleDB behind JWT auth, a telemetry read API (`/telemetry`, `/last`,
 > `/status`) serves it, and a ChirpStack v4 network server (EU868) with a
@@ -27,7 +27,12 @@ There is no SaaS multi-tenancy.
 > subscriber JWT via `/auth/mercure-token`, multiplexes `/devices/{id}` and
 > `/devices/{id}/commands` subscriptions, and updates online status, live
 > values, and command lifecycle (`sent` → `acked`) in place without polling.
-> The charts/insights views and delivery hardening remain.
+> The telemetry view charts `/devices/{id}/telemetry` with time-range,
+> resolution, and field pickers; the insights view renders per-group summary
+> cards (min/max/avg/count) and per-device multi-field timeseries from
+> `/insights/summary` and `/insights/timeseries`, with a device-group picker
+> backed by a new `GET /api/v1/groups` endpoint; both views handle loading and
+> empty states. Delivery hardening and deployment checks remain.
 > See [`specs/iiot-platform.md`](specs/iiot-platform.md) and
 > [`specs/iiot-platform-plan.md`](specs/iiot-platform-plan.md).
 
@@ -83,7 +88,7 @@ LoRaWAN gateways); the broker and database are never exposed directly.
 ## Repository Layout
 
 ```
-specs/        → design spec + implementation plan (Tasks 1-21 checked)
+specs/        → design spec + implementation plan (Tasks 1-22 checked)
 deploy/       → docker-compose, Caddyfile, mqtt/ broker config, chirpstack/, mock-modbus/
 services/     → auth (Node/Fastify), device-mgmt (Symfony), ingestion (Python), dashboard (Vue 3 SPA)
 db/           → init scripts (databases, telemetry hypertable + continuous aggregates)

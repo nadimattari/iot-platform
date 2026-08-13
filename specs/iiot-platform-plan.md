@@ -459,13 +459,13 @@ Tasks 21-25 pending
 **Description:** Telemetry chart view (time range, resolution, field picker) and insights pages (summary cards, timeseries) using PrimeVue Chart/ECharts.
 
 **Acceptance criteria:**
-- [ ] Chart queries `/telemetry` with selected range/resolution and renders correctly
-- [ ] Insights summary/timeseries pages render aggregated data
-- [ ] Empty states and loading states handled
+- [x] Chart queries `/telemetry` with selected range/resolution and renders correctly
+- [x] Insights summary/timeseries pages render aggregated data
+- [x] Empty states and loading states handled
 
 **Verification:**
-- [ ] `npm run test:unit` passes
-- [ ] Manual: seeded data renders across ranges
+- [x] `npm run test:unit` passes
+- [x] Manual: seeded data renders across ranges
 
 **Dependencies:** Tasks 19, 21
 

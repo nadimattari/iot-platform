@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Column from 'primevue/column'
@@ -12,11 +12,12 @@ import Select from 'primevue/select'
 import Tag from 'primevue/tag'
 import Textarea from 'primevue/textarea'
 import { createDevice } from '@/api/devices'
+import { listGroups } from '@/api/groups'
 import { mercure } from '@/mercure/client'
 import { useDevicesStore } from '@/stores/devices'
 import DeviceStatusTag from '@/components/DeviceStatusTag.vue'
 import LiveValueList from '@/components/LiveValueList.vue'
-import type { LiveEvent } from '@/api/types'
+import type { DeviceGroup, LiveEvent } from '@/api/types'
 
 const store = useDevicesStore()
 const router = useRouter()
@@ -31,9 +32,13 @@ const protocolOptions = [
 
 const createOptions = protocolOptions.slice(1)
 
+const groups = ref<DeviceGroup[]>([])
+const groupOptions = computed(() => groups.value.map((group) => ({ label: group.name, value: group.id })))
+
 const showCreate = ref(false)
 const createName = ref('')
 const createProtocol = ref('mqtt')
+const createGroup = ref('')
 const createMetadata = ref('{}')
 const creating = ref(false)
 const createError = ref<string | null>(null)
@@ -57,6 +62,7 @@ function changeProtocol(protocol: string): void {
 function openCreate(): void {
   createName.value = ''
   createProtocol.value = 'mqtt'
+  createGroup.value = ''
   createMetadata.value = '{}'
   createError.value = null
   showCreate.value = true
@@ -87,6 +93,7 @@ async function submitCreate(): Promise<void> {
     const { device, api_key } = await createDevice({
       name: createName.value.trim(),
       protocol: createProtocol.value,
+      group_id: createGroup.value || undefined,
       metadata,
     })
     showCreate.value = false
@@ -103,6 +110,7 @@ async function submitCreate(): Promise<void> {
 
 onMounted(() => {
   void store.loadList()
+  void listGroups().then(({ items }) => (groups.value = items)).catch(() => undefined)
   mercure.subscribe('/devices/*', onLive)
 })
 onUnmounted(() => {
@@ -144,6 +152,18 @@ onUnmounted(() => {
             :options="createOptions"
             option-label="label"
             option-value="value"
+          />
+        </div>
+        <div class="field">
+          <label for="create-group">Group</label>
+          <Select
+            id="create-group"
+            v-model="createGroup"
+            :options="groupOptions"
+            option-label="label"
+            option-value="value"
+            placeholder="No group"
+            :show-clear="true"
           />
         </div>
         <div class="field">

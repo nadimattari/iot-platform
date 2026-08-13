@@ -10,6 +10,12 @@
         <p>List devices, view online status and provisioning details.</p>
       </RouterLink>
 
+      <RouterLink to="/dashboard/telemetry" class="card">
+        <span class="pi pi-chart-bar" aria-hidden="true" />
+        <h2>Telemetry</h2>
+        <p>Raw downsampled values for a device across a chosen time range.</p>
+      </RouterLink>
+
       <RouterLink to="/dashboard/insights" class="card">
         <span class="pi pi-chart-line" aria-hidden="true" />
         <h2>Insights</h2>

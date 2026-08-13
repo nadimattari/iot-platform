@@ -17,6 +17,13 @@ export interface RefreshResponse {
 
 export type DeviceProtocol = 'mqtt' | 'modbus' | 'http' | 'lorawan'
 
+export interface DeviceGroup {
+  id: string
+  name: string
+  device_count: number
+  created_at: string
+}
+
 export interface Device {
   id: string
   name: string

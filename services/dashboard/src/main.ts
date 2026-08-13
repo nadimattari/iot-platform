@@ -9,6 +9,7 @@ import router from './router'
 
 import Button from 'primevue/button'
 import Card from 'primevue/card'
+import Chart from 'primevue/chart'
 import Checkbox from 'primevue/checkbox'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
@@ -41,6 +42,7 @@ app.use(PrimeVue, {
 
 app.component('Button', Button)
 app.component('Card', Card)
+app.component('Chart', Chart)
 app.component('Checkbox', Checkbox)
 app.component('Column', Column)
 app.component('DataTable', DataTable)

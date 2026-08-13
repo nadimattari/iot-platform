@@ -23,6 +23,7 @@ async function logout(): Promise<void> {
         <nav class="nav" aria-label="Primary">
           <RouterLink to="/dashboard" class="nav-item">Overview</RouterLink>
           <RouterLink to="/dashboard/devices" class="nav-item">Devices</RouterLink>
+          <RouterLink to="/dashboard/telemetry" class="nav-item">Telemetry</RouterLink>
           <RouterLink to="/dashboard/insights" class="nav-item">Insights</RouterLink>
         </nav>
 
