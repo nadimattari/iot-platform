@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { AuthService } from '../services/auth-service.js';
+import type { MercureTokenService } from '../services/mercure-token.js';
 import type { SigningKeys } from '../keys.js';
 import { verifyAccessToken } from '../services/tokens.js';
 
@@ -21,6 +22,7 @@ export function registerAuthRoutes(
   app: FastifyInstance,
   auth: AuthService,
   keys: SigningKeys,
+  mercure: MercureTokenService | null,
 ): void {
   app.post('/auth/login', async (request, reply) => {
     const parsed = loginSchema.safeParse(request.body);
@@ -70,5 +72,18 @@ export function registerAuthRoutes(
       email: claims.email,
       role: claims.role,
     });
+  });
+
+  app.get('/auth/mercure-token', async (request, reply) => {
+    const header = request.headers.authorization;
+    if (!header?.startsWith('Bearer ')) return reply.code(401).send({ error: 'unauthorized' });
+
+    const claims = await verifyAccessToken(keys, header.slice('Bearer '.length));
+    if (!claims) return reply.code(401).send({ error: 'unauthorized' });
+
+    if (!mercure) return reply.code(503).send({ error: 'mercure_not_configured' });
+
+    const { token, expiresInSeconds } = await mercure.issue(claims.sub);
+    return reply.send({ mercure_token: token, expires_in: expiresInSeconds });
   });
 }

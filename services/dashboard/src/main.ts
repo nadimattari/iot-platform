@@ -8,9 +8,19 @@ import App from './App.vue'
 import router from './router'
 
 import Button from 'primevue/button'
+import Card from 'primevue/card'
+import Checkbox from 'primevue/checkbox'
+import Column from 'primevue/column'
+import DataTable from 'primevue/datatable'
+import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
-import Password from 'primevue/password'
 import Message from 'primevue/message'
+import Paginator from 'primevue/paginator'
+import Password from 'primevue/password'
+import Select from 'primevue/select'
+import Tag from 'primevue/tag'
+import Textarea from 'primevue/textarea'
+import ToggleSwitch from 'primevue/toggleswitch'
 
 import '@/assets/styles.css'
 
@@ -29,8 +39,18 @@ app.use(PrimeVue, {
 })
 
 app.component('Button', Button)
+app.component('Card', Card)
+app.component('Checkbox', Checkbox)
+app.component('Column', Column)
+app.component('DataTable', DataTable)
+app.component('InputNumber', InputNumber)
 app.component('InputText', InputText)
-app.component('Password', Password)
 app.component('Message', Message)
+app.component('Paginator', Paginator)
+app.component('Password', Password)
+app.component('Select', Select)
+app.component('Tag', Tag)
+app.component('Textarea', Textarea)
+app.component('ToggleSwitch', ToggleSwitch)
 
 app.mount('#app')

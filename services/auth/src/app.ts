@@ -3,6 +3,7 @@ import type { Config } from './config.js';
 import type { SigningKeys } from './keys.js';
 import type { AuthRepo } from './services/auth-repo.js';
 import { AuthService } from './services/auth-service.js';
+import { createMercureTokenService } from './services/mercure-token.js';
 import { registerAuthRoutes } from './routes/auth.js';
 
 export interface BuildAppOptions {
@@ -27,7 +28,12 @@ export function buildApp(opts: BuildAppOptions): FastifyInstance {
     ],
   }));
 
-  registerAuthRoutes(app, new AuthService(opts), opts.keys);
+  registerAuthRoutes(
+    app,
+    new AuthService(opts),
+    opts.keys,
+    createMercureTokenService(opts.config.MERCURE_SUBSCRIBER_JWT_KEY),
+  );
 
   return app;
 }

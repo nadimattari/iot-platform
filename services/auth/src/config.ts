@@ -14,6 +14,7 @@ const envSchema = z.object({
   AUTH_JWT_PUBLIC_KEY: z.string().optional(),
   AUTH_ACCESS_TTL_MINUTES: z.coerce.number().int().positive().default(15),
   AUTH_REFRESH_DAYS: z.coerce.number().int().positive().default(30),
+  MERCURE_SUBSCRIBER_JWT_KEY: z.string().default(''),
 });
 
 export type Config = z.infer<typeof envSchema>;

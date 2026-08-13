@@ -132,3 +132,31 @@ export interface CommandListResult {
   page: number
   limit: number
 }
+
+/** A single normalized telemetry point in a Mercure live event. */
+export interface LivePoint {
+  field: string
+  value: number
+  type: string
+  quality: number
+}
+
+/** Data published by ingestion to the `/devices/{deviceId}` Mercure topic. */
+export interface LiveTelemetryEvent {
+  device_id: string
+  time: string
+  points: LivePoint[]
+}
+
+/** Data published by device-mgmt to the `/devices/{deviceId}/commands` topic. */
+export interface LiveCommandEvent {
+  command: Command
+}
+
+/** Discriminated union of all Mercure event payloads. */
+export type LiveEvent = LiveTelemetryEvent | LiveCommandEvent
+
+export interface MercureTokenResponse {
+  mercure_token: string
+  expires_in: number
+}

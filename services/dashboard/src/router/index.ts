@@ -4,6 +4,7 @@ import LoginView from '@/views/LoginView.vue'
 import DashboardLayout from '@/views/DashboardLayout.vue'
 import HomeView from '@/views/HomeView.vue'
 import DevicesView from '@/views/DevicesView.vue'
+import DeviceDetailView from '@/views/DeviceDetailView.vue'
 import InsightsView from '@/views/InsightsView.vue'
 
 const router = createRouter({
@@ -18,6 +19,7 @@ const router = createRouter({
       children: [
         { path: '', name: 'home', component: HomeView },
         { path: 'devices', name: 'devices', component: DevicesView },
+        { path: 'devices/:id', name: 'device-detail', component: DeviceDetailView, props: true },
         { path: 'insights', name: 'insights', component: InsightsView },
       ],
     },

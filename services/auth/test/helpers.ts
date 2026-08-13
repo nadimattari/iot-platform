@@ -15,6 +15,7 @@ export function makeConfig(overrides: Partial<Config> = {}): Config {
     AUTH_JWT_KEYS_DIR: '/keys',
     AUTH_ACCESS_TTL_MINUTES: 15,
     AUTH_REFRESH_DAYS: 30,
+    MERCURE_SUBSCRIBER_JWT_KEY: 'mercure-subscriber-secret',
     ...overrides,
   };
 }

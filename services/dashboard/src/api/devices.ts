@@ -82,7 +82,17 @@ export function deviceLast(id: string): Promise<LastResponse> {
 
 export function sendCommand(
   id: string,
-  input: { type: string; payload?: string; confirmed?: boolean; f_port?: number },
+  input: {
+    type: string
+    /** MQTT: object payload keyed by field. */
+    payload?: unknown
+    /** LoRaWAN: hex-encoded payload. */
+    data?: string
+    /** LoRaWAN: object representation of the payload. */
+    object?: unknown[]
+    confirmed?: boolean
+    f_port?: number
+  },
 ): Promise<{ command: Command }> {
   return api<{ command: Command }>(`/api/v1/devices/${id}/commands`, {
     method: 'POST',
@@ -90,8 +100,10 @@ export function sendCommand(
   })
 }
 
-export function listCommands(params: { page?: number; limit?: number } = {}): Promise<CommandListResult> {
+export function listCommands(params: { device_id?: string; status?: string; page?: number; limit?: number } = {}): Promise<CommandListResult> {
   const search = new URLSearchParams()
+  if (params.device_id) search.set('device_id', params.device_id)
+  if (params.status) search.set('status', params.status)
   search.set('page', String(params.page ?? 1))
   search.set('limit', String(params.limit ?? 25))
   return api<CommandListResult>(`/api/v1/commands?${search.toString()}`)

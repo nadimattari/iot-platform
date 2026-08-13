@@ -48,6 +48,7 @@ services:
       AUTH_ADMIN_EMAIL: ${AUTH_ADMIN_EMAIL}
       AUTH_ADMIN_PASSWORD: ${AUTH_ADMIN_PASSWORD}
       AUTH_JWT_KEYS_DIR: /keys
+      MERCURE_SUBSCRIBER_JWT_KEY: ${MERCURE_SUBSCRIBER_JWT_KEY:?MERCURE_SUBSCRIBER_JWT_KEY must be set in deploy/.env}
     volumes:
       - auth_keys:/keys
     networks:
