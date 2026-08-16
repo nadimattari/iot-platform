@@ -23,7 +23,6 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@rolldown/binding-linux-x64-gnu": "^1.2.3",
     "@types/node": "^26.2.0",
     "@types/pg": "^8.21.0",
     "tsx": "^4.23.11",

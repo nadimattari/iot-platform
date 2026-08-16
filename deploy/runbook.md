@@ -82,6 +82,7 @@ Key values in `deploy/.env`:
 | `CHIRPSTACK_DB_PASSWORD` | long random string                                     |
 | `CHIRPSTACK_MQTT_PASSWORD` | long random string                                    |
 | `CHIRPSTACK_API_SECRET`   | long random string                                     |
+| `CHIRPSTACK_API_SECRET`   | long random string                                     |
 | `CHIRPSTACK_APPLICATION_ID` | keep the generated UUID or regenerate before first ChirpStack app creation |
 
 Generate secrets with `openssl rand -hex 32` (or `-base64 48`).
@@ -92,6 +93,15 @@ Boot the stack:
 cd deploy
 docker compose up -d --build
 docker compose ps                # all services should be running + healthy
+```
+
+**Apply the application schema** — `db/init` only creates the databases,
+extensions, and TimescaleDB hypertables; the app tables (devices, commands,
+...) come from Doctrine migrations. Skipping this leaves device CRUD returning
+500 (`relation "devices" does not exist`):
+
+```bash
+docker compose exec device-mgmt bin/console doctrine:migrations:migrate --no-interaction
 ```
 
 Caddy provisions TLS automatically via Let's Encrypt the first time `DOMAIN`
@@ -188,7 +198,9 @@ after their dependencies are healthy.
 ## 8. Observability
 
 - Health endpoints: `https://iot.example.com/api/v1/health` (device-mgmt),
-  `/healthz` (Caddy), `/ingest/health` (ingestion)
+  `/healthz` (Caddy). Ingestion exposes `/health` internally (FastAPI), not
+  routed by Caddy — check it via the container healthcheck or
+  `docker compose exec ingestion wget -q -O- http://127.0.0.1:8000/health`
 - Logs: `docker compose logs -f <service>`
 - Mercure hub: `docker compose logs -f caddy`
 - TimescaleDB: `docker compose exec db psql -U iiot -d iiot`

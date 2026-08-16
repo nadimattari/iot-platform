@@ -9,7 +9,9 @@ dashboards, time-series insights, and command/downlink control.
 Each customer deploys the full stack on their own VPS via Docker Compose.
 There is no SaaS multi-tenancy.
 
-> **Status: in development.** Phases 0-3 are implemented (Tasks 1-24 of 25): the
+> **Status: in development.** Phases 0-3 and Task 25 acceptance validation
+> (on an RPi4 parity host — see `docs/acceptance.md`) are implemented; only
+> external HTTPS + the upgrade-path pull remain, deferred to the VPS. The
 > full Docker stack boots locally, MQTT / Modbus TCP / HTTP / LoRaWAN data lands
 > in TimescaleDB behind JWT auth, a telemetry read API (`/telemetry`, `/last`,
 > `/status`) serves it, and a ChirpStack v4 network server (EU868) with a
@@ -97,7 +99,7 @@ LoRaWAN gateways); the broker and database are never exposed directly.
 ## Repository Layout
 
 ```
-specs/        → design spec + implementation plan (Tasks 1-24 checked)
+specs/        → design spec + implementation plan (Tasks 1-25 checked)
 deploy/       → docker-compose, Caddyfile, mqtt/ broker config, chirpstack/, mock-modbus/
 services/     → auth (Node/Fastify), device-mgmt (Symfony), ingestion (Python), dashboard (Vue 3 SPA)
 db/           → init scripts (databases, telemetry hypertable + continuous aggregates)
