@@ -30,7 +30,14 @@ EOSQL
 # search columns), hstore and pgcrypto (gen_random_uuid() in migrations).
 psql -v ON_ERROR_STOP=1 \
      --username "$POSTGRES_USER" \
-     --dbname "chirpstack" <<-EOSQL
+     --dbname "chirpstack" \
+     -v chirpstack_user="$CHIRPSTACK_DB_USER" <<-EOSQL
+    -- Make the public schema owned by the ChirpStack role so its automatic
+    -- migrations can create tables. On PG15+ a DB created with OWNER already
+    -- gets this, but being explicit protects against older/edge states (a DB
+    -- created without OWNER leaves public owned by the bootstrap superuser and
+    -- ChirpStack then fails every migration with permission denied).
+    ALTER SCHEMA public OWNER TO :"chirpstack_user";
     CREATE EXTENSION IF NOT EXISTS pg_trgm;
     CREATE EXTENSION IF NOT EXISTS hstore;
     CREATE EXTENSION IF NOT EXISTS pgcrypto;

@@ -128,7 +128,8 @@ docker compose -f deploy/docker-compose.yml up -d
 - ChirpStack UI: `http://chirpstack.localhost` — add `127.0.0.1 chirpstack.localhost`
   to your hosts file, or set `CHIRPSTACK_SITE_ADDR`
 - Admin login: the `AUTH_ADMIN_EMAIL` / `AUTH_ADMIN_PASSWORD` values from `deploy/.env`
-  (seeded on first boot); ChirpStack UI uses `CHIRPSTACK_ADMIN_EMAIL` / `CHIRPSTACK_ADMIN_PASSWORD`
+  (seeded on first boot). ChirpStack UI logs in with the default **`admin` / `admin`**
+  (ChirpStack v4 seeds it on first boot; change it in the UI or via `chirpstack set-password`)
 - Operations: see [`deploy/runbook.md`](deploy/runbook.md) for DNS, firewall/ports,
   Caddy auto-TLS, backups, upgrades, and restore
 

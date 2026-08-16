@@ -110,8 +110,9 @@ is a real hostname (validates over port 80, so 80 must be open).
 First-login checklist:
 
 - `https://iot.example.com` → dashboard login (uses `AUTH_ADMIN_*` creds)
-- `https://chirpstack.iot.example.com` → ChirpStack UI (uses
-  `CHIRPSTACK_ADMIN_EMAIL`/`CHIRPSTACK_ADMIN_PASSWORD`)
+- `https://chirpstack.iot.example.com` → ChirpStack UI (default **`admin` / `admin`**,
+  seeded by ChirpStack v4 on first boot; change it in the UI or via
+  `docker compose exec chirpstack chirpstack set-password --email admin`)
 - Register a device in the dashboard, then publish MQTT to confirm ingestion
 
 ## 5. Backups
