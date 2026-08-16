@@ -2,9 +2,20 @@
 
 Verifies every success criterion from [`specs/iiot-platform.md`](../specs/iiot-platform.md)
 on real infrastructure. See [`deploy/runbook.md`](../deploy/runbook.md) for the
-provisioning steps. Results are recorded here; when the final box is ticked,
-mark Task 25 complete in [`specs/iiot-platform-plan.md`](../specs/iiot-platform-plan.md)
-and update the README status block.
+provisioning steps.
+
+Validation runs in **two phases**:
+
+1. **RPi4 parity run** — done 2026-08-16. Results and findings are recorded
+   below; all SC1–SC9 boxes are ticked (VPS-only sub-items explicitly deferred).
+2. **Real VPS run** — planned follow-up. Re-runs the full checklist on a real
+   VPS to close the VPS-only items (external HTTPS, dense load, real LoRaWAN
+   gateway) and confirm parity. Fill in the table and tick the boxes in
+   [VPS Run (planned)](#vps-run-planned).
+
+Task 25 in [`specs/iiot-platform-plan.md`](../specs/iiot-platform-plan.md) is
+complete on the strength of the parity run; the VPS run is a confirmation
+pass, not a prerequisite.
 
 ## Environment Under Test
 
@@ -19,8 +30,38 @@ Last run: **RPi4 (home network parity)** — 2026-08-16.
 | Docker       | 29.7.2; Compose v5.4.0 |
 | Storage      | 29 GiB SD card (mmcblk0p2), 16 GiB free at run — SD card, not USB SSD |
 | Domain       | none (`DOMAIN=` → plain HTTP; HTTPS deferred) |
-| Commit SHA   | `d5d6bf6` (plus uncommitted Task-25 fixes) |
+| Commit SHA   | Run at `d5d6bf6` + uncommitted Task-25 fixes; fixes since pushed (head `d6b0b1c`) |
 | Date         | 2026-08-16 |
+
+## VPS Run (planned)
+
+A real-VPS run happens **later** to close the VPS-only items below and re-confirm
+parity. Follow the runbook, fill in the environment table, then tick every
+remaining box and record evidence here.
+
+| Field | Value |
+|-------|-------|
+| Host         | _fill in_ (e.g. ARM64 VPS, Hetzner/Oracle) |
+| OS / kernel  | |
+| Arch         | |
+| RAM          | |
+| Docker       | |
+| Storage      | |
+| Domain       | |
+| Commit SHA   | |
+| Date         | |
+
+Remaining VPS items to verify:
+
+- [ ] **SC1** — `https://<domain>` serves the dashboard over auto-TLS (Let's Encrypt);
+      ChirpStack reachable at `https://chirpstack.<domain>`; HTTP→HTTPS enforced
+- [ ] **SC4** — LoRaWAN device ingest through a real gateway (UDP 1700 open),
+      live value on dashboard in < 1 s
+- [ ] **SC5** — dense load: 300 devices × 30 days at 5-min interval;
+      `/telemetry` @1m and `/last` < 300 ms
+- [ ] **SC6** — LoRaWAN confirmed-downlink command round-trip (`sent` → `acked`)
+- [ ] **Full re-check** — re-run SC1–SC9 from this checklist at the VPS commit
+      and record results below
 
 ## Variant Differences
 
@@ -56,7 +97,8 @@ Reference: `specs/iiot-platform.md:216-222`.
 - [x] **SC1 — One-command deploy, no manual setup.** Fresh host: `git clone` +
       `cp deploy/.env.example deploy/.env` + fill secrets → `docker compose up -d --build`
       → all containers healthy → dashboard on HTTPS. No manual DB/broker setup.
-      - [ ] VPS: `https://iot.example.com` serves the dashboard over auto-TLS
+      - [ ] VPS (planned — [VPS Run](#vps-run-planned)): `https://iot.example.com`
+            serves the dashboard over auto-TLS
       - [x] RPi4: dashboard reachable over HTTP on the LAN (`http://192.168.0.34/`
             → `/dashboard/`); HTTPS **deferred to the VPS** — home NAT has no
             port-forward, per operator decision
@@ -89,7 +131,7 @@ Reference: `specs/iiot-platform.md:216-222`.
 
 - [x] **SC5 — Historical query performance.** `telemetry` from→to at 1m resolution
       returns in **< 300 ms** for a few hundred devices × 30 days.
-      - [x] VPS: pending
+      - [ ] VPS (planned — [VPS Run](#vps-run-planned)): dense 5-min-interval load test
       - [x] RPi4: **110 ms** for 30 days @ 1m on a 433 221-point table
             (300 devices × 30 days × hourly); `/last` **92 ms**. Recorded as
             "passes at full device count, reduced density" — a dense
@@ -127,14 +169,15 @@ Reference: `specs/iiot-platform.md:216-222`.
 
 ## Known Deferred Items
 
-Any criterion not verified on the chosen host is **explicitly deferred** here:
+Items not verified on the parity host are **explicitly deferred** here; each is
+closed by the [VPS Run (planned)](#vps-run-planned) checklist above.
 
 | Criterion | Reason | When |
 |-----------|--------|------|
-| SC1 external HTTPS | Home NAT, no port-forward; operator chose to defer | VPS |
-| SC4 LoRaWAN real gateway uplink/downlink | Fake-uplink mock covers ingest; no LoRaWAN hardware on the Pi LAN | VPS / hardware |
-| SC5 dense load (5-min interval × 300 devices × 30 days) | Pi ran hourly-density (433k points, 110 ms) — passes target but at reduced density | VPS |
-| SC6 LoRaWAN confirmed-downlink ACK | Requires real gateway ACK path | VPS / hardware |
+| SC1 external HTTPS | Home NAT, no port-forward; operator chose to defer | VPS run (planned) |
+| SC4 LoRaWAN real gateway uplink/downlink | Fake-uplink mock covers ingest; no LoRaWAN hardware on the Pi LAN | VPS run (planned) / hardware |
+| SC5 dense load (5-min interval × 300 devices × 30 days) | Pi ran hourly-density (433k points, 110 ms) — passes target but at reduced density | VPS run (planned) |
+| SC6 LoRaWAN confirmed-downlink ACK | Requires real gateway ACK path | VPS run (planned) / hardware |
 
 ## Sign-off
 
