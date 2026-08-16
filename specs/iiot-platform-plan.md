@@ -510,7 +510,7 @@ pending VPS/push (see `docs/acceptance.md`).
 - [x] Runs green in CI on push/PR
 
 **Verification:**
-- [x] `docker compose -f deploy/docker-compose.test.yml up --exit-code-from e2e` passes
+- [x] `docker compose -p iiot-platform-e2e -f deploy/docker-compose.yml -f deploy/docker-compose.test.yml up --exit-code-from e2e` passes
 - [x] CI badge green
 
 **Dependencies:** All Phase 0-4

@@ -4,6 +4,10 @@ name: E2E
 # mock devices for MQTT / Modbus / HTTP / LoRaWAN and asserts the ingest ->
 # TimescaleDB -> API -> Mercure(SSE) flow. The e2e container's exit code is
 # propagated by --exit-code-from, so a single failed check fails the job.
+#
+# The test profile is a second `-f` overlay (NOT include:) so the merged
+# config loads on every compose version (older compose rejects redefining an
+# `include:`d service as "conflicts with imported resource").
 on:
   push:
   pull_request:
@@ -21,12 +25,12 @@ jobs:
         run: cp deploy/.env.example deploy/.env
 
       - name: Run E2E suite
-        run: docker compose -f deploy/docker-compose.test.yml up --build --exit-code-from e2e
+        run: docker compose -p iiot-platform-e2e -f deploy/docker-compose.yml -f deploy/docker-compose.test.yml up --build --exit-code-from e2e
 
       - name: Dump logs on failure
         if: failure()
-        run: docker compose -f deploy/docker-compose.test.yml logs --tail 200
+        run: docker compose -p iiot-platform-e2e -f deploy/docker-compose.yml -f deploy/docker-compose.test.yml logs --tail 200
 
       - name: Tear down test stack
         if: always()
-        run: docker compose -f deploy/docker-compose.test.yml down -v
+        run: docker compose -p iiot-platform-e2e -f deploy/docker-compose.yml -f deploy/docker-compose.test.yml down -v

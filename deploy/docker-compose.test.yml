@@ -5,22 +5,31 @@
 # MQTT/HTTP/LoRaWAN via the tests/e2e drivers) and runs the E2E suite. The
 # `e2e` service exits 0 on success, so the exit code of
 #
-#   docker compose -f deploy/docker-compose.test.yml up --exit-code-from e2e
+#   docker compose -p iiot-platform-e2e -f deploy/docker-compose.yml \
+#     -f deploy/docker-compose.test.yml up --exit-code-from e2e
 #
 # reflects the suite result (the acceptance command from the plan). Host ports
 # are dropped so the test stack never collides with a running dev stack.
 #
+# The test profile is passed as a second `-f` overlay rather than `include:`.
+# `include:` + redefining an imported service fails on compose v2.3x with
+# "services.<name> conflicts with imported resource" (compose v5 tolerates it,
+# v2.3x does not), which is what broke the CI E2E job. `-f` overlay merge works
+# on every compose version. Because an empty list is a merge no-op, host ports
+# are cleared explicitly with `!reset` (compose >= 2.24; the GitHub runner
+# ships 2.38). The explicit `-p iiot-platform-e2e` keeps the project name (and
+# therefore volumes/networks) distinct from a running prod stack.
+#
 #   cp deploy/.env.example deploy/.env
-#   docker compose -f deploy/docker-compose.test.yml up --build --exit-code-from e2e
-#   docker compose -f deploy/docker-compose.test.yml down -v
-name: iiot-platform-e2e
-
-include:
-  - docker-compose.yml
+#   docker compose -p iiot-platform-e2e -f deploy/docker-compose.yml \
+#     -f deploy/docker-compose.test.yml up --exit-code-from e2e
+#   docker compose -p iiot-platform-e2e -f deploy/docker-compose.yml \
+#     -f deploy/docker-compose.test.yml down -v
 
 services:
   # Fresh database per run; the shared DB volume and any host bindings must not
-  # leak between projects.
+  # leak between projects. The volumes list REPLACES the base list (overlay
+  # merge), so the db_test_data volume is used and host 5432 is not bound.
   db:
     ports: !reset []
     volumes:

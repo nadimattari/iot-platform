@@ -189,7 +189,7 @@ cd services/auth         && npm test
 cd services/device-mgmt  && php bin/phpunit
 cd services/ingestion    && pytest
 cd services/dashboard    && npm run test:unit
-docker compose -f deploy/docker-compose.test.yml up --exit-code-from e2e   # integration/e2e
+docker compose -p iiot-platform-e2e -f deploy/docker-compose.yml -f deploy/docker-compose.test.yml up --exit-code-from e2e   # integration/e2e
 ```
 
 ## Code Style
