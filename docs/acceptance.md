@@ -47,6 +47,7 @@ recorded here:
 | F3 | Runbook section 8 documented ingestion health as `/ingest/health`; the actual route is FastAPI `/health` and it is not routed by Caddy. | Fixed |
 | F4 | `deploy/.env.example` and the runbook omitted `CHIRPSTACK_API_SECRET`, which compose requires (`:?`). | Fixed |
 | F5 | Insights summary reads the 1d aggregate, which never materializes the current in-progress day (policy `end_offset = 1 day`) — today's data appears only after the day completes. Expected, but worth documenting. | Documented |
+| F6 | `deploy/mqtt/acl` is a **tracked** file that `entrypoint.sh` chowns to uid 1883 (`mosquitto`) and rewrites at every container start — it always shows as modified in `git status`, and a future commit touching that file would block `git pull --ff-only` on a running host. Consider generating it into an untracked runtime path or gitignoring it. | Noted — candidate follow-up |
 
 ## Success Criteria Checklist
 
@@ -76,7 +77,7 @@ Reference: `specs/iiot-platform.md:216-222`.
 - [x] **SC4 — All four protocols ingest live.** Register one device per protocol
       (MQTT, LoRaWAN, Modbus TCP, HTTP), have each publish data, and confirm the
       live value appears on the dashboard in **< 1 s**.
-      - [x] MQTT device (e2e mock publishes `devices/<id>/up`) — SSE + `/last` value=22.9
+      - [x] MQTT device (e2e mock publishes `devices/<id>/up`) — SSE + `/api/v1/devices/<id>/last` value=22.9
       - [x] LoRaWAN device (fake ChirpStack `event/up` envelope) — SSE + `/last` humidity=61.5
       - [x] Modbus TCP device (pymodbus FC03 mock at `mock-modbus:5020`) — `/last`
             temperature=21.5, pressure=1013, counter=119001
@@ -93,7 +94,7 @@ Reference: `specs/iiot-platform.md:216-222`.
             (300 devices × 30 days × hourly); `/last` **92 ms**. Recorded as
             "passes at full device count, reduced density" — a dense
             5-min-interval load test remains for the VPS.
-      - Evidence: `time curl .../telemetry?from=-30%20days&to=now&resolution=1m` → 110 ms
+      - Evidence: `time curl .../api/v1/devices/<id>/telemetry?from=-30%20days&to=now&resolution=1m` → 110 ms
 
 - [x] **SC6 — Command round-trip.** Send a command/downlink from the UI; the
       device acknowledges; status transitions `sent` → `acked` in the UI (Mercure
@@ -106,10 +107,10 @@ Reference: `specs/iiot-platform.md:216-222`.
       - Evidence: `sc6_command_roundtrip.py` printed `RESULT=PASS`; `GET /commands` → `['acked']`
 
 - [x] **SC7 — Insights.** Per-group summary and per-device multi-field timeseries
-      render correctly from `/insights/summary` and `/insights/timeseries`.
-      - Evidence: `/insights/timeseries` → 1m buckets with min/max/avg/count;
-        `/insights/summary` → per-field min/max/avg/count (240 backdated points,
-        2 fields) after refreshing the 1d aggregate
+      render correctly from `/api/v1/insights/summary` and `/api/v1/insights/timeseries`.
+      - Evidence: `/api/v1/insights/timeseries?device_id=&bucket=1m` → 1m buckets with
+        min/max/avg/count; `/api/v1/insights/summary?group_id=` → per-field
+        min/max/avg/count (240 backdated points, 2 fields) after refreshing the 1d aggregate
 
 - [x] **SC8 — Backups + restore.** `deploy/backup/backup.sh` produces both dumps;
       restore works onto a fresh stack (`docker compose up -d db` → restore.sh → up).
@@ -117,11 +118,12 @@ Reference: `specs/iiot-platform.md:216-222`.
         ran writers-stop → clear → load → restart; all 13 containers healthy;
         8 devices + 1128 telemetry points present after restore
 
-- [ ] **SC9 — Upgrade path.** `git pull --ff-only` + `docker compose up -d` (or
+- [x] **SC9 — Upgrade path.** `git pull --ff-only` + `docker compose up -d` (or
       `--build`) recovers without manual steps; pre-upgrade backup advised.
-      - Evidence: pending — the Task-25 fixes (F1/F4) land on the Pi via a real
-        `git pull --ff-only` when pushed; the compose-only path is covered by
-        SC2's restart test.
+      - Evidence: pushed Task-25 fixes (`1e77558`), then on the Pi
+        `git fetch && git pull --ff-only` → fast-forward, `docker compose up -d --build`
+        → auth image rebuilt (arm64) and all 13 containers `healthy`;
+        login → JWT → `/api/v1/devices/<id>/telemetry` (40 points, 17.6 ms) intact.
 
 ## Known Deferred Items
 
@@ -133,14 +135,13 @@ Any criterion not verified on the chosen host is **explicitly deferred** here:
 | SC4 LoRaWAN real gateway uplink/downlink | Fake-uplink mock covers ingest; no LoRaWAN hardware on the Pi LAN | VPS / hardware |
 | SC5 dense load (5-min interval × 300 devices × 30 days) | Pi ran hourly-density (433k points, 110 ms) — passes target but at reduced density | VPS |
 | SC6 LoRaWAN confirmed-downlink ACK | Requires real gateway ACK path | VPS / hardware |
-| SC9 upgrade path | Needs the Task-25 fixes pushed; `git pull --ff-only` to run once committed | On push |
 
 ## Sign-off
 
-- [x] All applicable criteria verified above (SC1/SC4/SC5/SC6/SC9 partial items deferred above)
+- [x] All applicable criteria verified above (SC1/SC4/SC5/SC6 partial items deferred above)
 - [x] Deferred items recorded and accepted
-- [ ] `specs/iiot-platform-plan.md` Task 25 boxes ticked
-- [ ] README status block updated (Task 25 done)
-- [ ] Commit + tag release
+- [x] `specs/iiot-platform-plan.md` Task 25 boxes ticked
+- [x] README status block updated (Task 25 done)
+- [ ] Commit + tag release (pending operator)
 
 **Signed off by:** ____________  **Date:** ____________  **Environment:** ____________
