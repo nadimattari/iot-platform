@@ -77,25 +77,28 @@ upgrade path.
 
 ## Architecture
 
-```
-LoRa gateways ──UDP 1700──▶ gateway-bridge ──MQTT──▶ ChirpStack NS/AS ──gRPC──▶ ChirpStack REST API
-                                                          │  app events (uplink/ack) via MQTT
-MQTT devices ────────────────────────────────▶ Mosquitto ◀── device-mgmt (downlink commands)
-Modbus TCP devices ◀──poll──▶ ingestion                  ▲
-HTTP devices ──POST /ingest/http──▶ ingestion ───────────┘ (device uplinks)
-                                        │
-                       device-mgmt consumers ◀──MQTT── Mosquitto (acks / lifecycle)
-                                        ▼
-                             TimescaleDB ◀── reads ── device-mgmt API
-                                        │
-                 Mercure (SSE) ◀── events (telemetry <1s, command status)
-
-Browser ──▶ Caddy ──/dashboard──────────▶ SPA
-                ├──/auth/*──────────────▶ auth (Node)
-                ├──/api/v1/*────────────▶ device-mgmt (Symfony)
-                ├──/ingest/*────────────▶ ingestion
-                ├──/.well-known/mercure─▶ SSE hub
-                └──chirpstack.localhost──▶ ChirpStack UI
+```mermaid
+flowchart LR
+    LG["LoRa gateways"] -- "UDP 1700" --> GB[gateway-bridge]
+    GB -- MQTT --> CS["ChirpStack NS/AS"]
+    CS -- "app events (uplink/ack)" --> MQ[Mosquitto]
+    CS -- gRPC --> CRA["ChirpStack REST API"]
+    MD["MQTT devices"] -- MQTT --> MQ
+    MT["Modbus TCP devices"] <-- poll --> ING[ingestion]
+    HD["HTTP devices"] -- "POST /ingest/http" --> ING
+    ING -- "device uplinks" --> MQ
+    MQ -- "acks / lifecycle" --> DC["device-mgmt consumers"]
+    DM["device-mgmt API"] -- "downlink commands" --> MQ
+    DC -- writes --> TS[TimescaleDB]
+    DM -- reads --> TS
+    DM -- "events (telemetry <1s, command status)" --> MR["Mercure (SSE)"]
+    BR[Browser] --> CA[Caddy]
+    CA -- "/dashboard" --> SPA["Dashboard SPA"]
+    CA -- "/auth/*" --> AU["auth (Node)"]
+    CA -- "/api/v1/*" --> DM
+    CA -- "/ingest/*" --> ING
+    CA -- "/.well-known/mercure" --> MR
+    CA -- "chirpstack.localhost" --> CUI["ChirpStack UI"]
 ```
 
 Caddy is the only service reachable from the public internet (ports 80/443,
@@ -144,7 +147,4 @@ docker compose -p iiot-platform-e2e -f deploy/docker-compose.yml \
 ```
 
 This boots the whole stack in an isolated compose project with mock devices for
-all four protocols and exits 0 on success (18 checks).
-
-See the [spec](specs/iiot-platform.md) for objectives and success criteria,
-and the [implementation plan](specs/iiot-platform-plan.md) for the 25-task breakdown across 6 phases.
+all four protocols and exits 0 on success.
