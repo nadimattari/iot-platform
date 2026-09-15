@@ -46,25 +46,48 @@ LoRaWAN gateways).
 
 ## Architecture / Data Flow
 
-```
-LoRa devices ──UDP 1700──▶ gateway ──chirpstack-gateway-bridge──▶ MQTT broker
-                                                                       │
-MQTT devices ─────────────────────────────────────────────────────────▶│
-Modbus TCP devices ◀──poll──▶ ingestion (Modbus master)                │
-HTTP devices ──POST /ingest/http──▶ ingestion                          │
-                                                                       ▼
-                                          ┌─────────────────────────────────────┐
-                    ChirpStack ──MQTT────▶│  ingestion (Python)                 │
-                                          │  subscribe/normalize/batch ──▶ TSDB │
-                                          │  publish events ──▶ Mercure         │
-                                          └─────────────────────────────────────┘
-                                                      │
-                            PostgreSQL+TimescaleDB ◀──┘ (hypertable + continuous aggregates)
+```mermaid
+flowchart LR
+    subgraph DEV["Devices"]
+        LORA[LoRa devices]
+        MQTTD[MQTT devices]
+        MODB[Modbus TCP devices]
+        HTTPD[HTTP devices]
+    end
 
-Browser ──▶ Caddy──/dashboard─────▶ SPA  (SSE ◀── Mercure)
-                ├──/auth/*────────▶ auth (Node)       ── issues/validates JWTs
-                ├──/api/v1/*──────▶ device-mgmt (PHP) ── validates JWT, CRUD, reads TSDB
-                └──/api/insights*─▶ device-mgmt (PHP) ── reads continuous aggregates
+    GW[gateway]
+    GWB[chirpstack-gateway-bridge]
+    MQ[MQTT broker]
+    CS[ChirpStack]
+    ING[ingestion Python]
+    DB[(PostgreSQL + TimescaleDB<br/>hypertable + continuous aggregates)]
+    MR[Mercure]
+
+    LORA -- UDP 1700 --> GW
+    GW --> GWB
+    GWB --> MQ
+    MQTTD --> MQ
+    MQ --> ING
+    CS -- MQTT --> ING
+    MODB <-- poll --> ING
+    HTTPD -- POST /ingest/http --> ING
+    ING -- subscribe/normalize/batch --> DB
+    ING -- publish events --> MR
+
+    subgraph WEB["Web"]
+        BR[Browser]
+        CA[Caddy]
+        SPA[Vue SPA]
+        AU[auth Node<br/>issues/validates JWTs]
+        DM[device-mgmt PHP<br/>validates JWT, CRUD, reads TSDB]
+    end
+
+    BR --> CA
+    CA -- /dashboard --> SPA
+    MR -- SSE --> SPA
+    CA -- /auth/* --> AU
+    CA -- /api/v1/* and /api/insights* --> DM
+    DM -- reads continuous aggregates --> DB
 ```
 
 ### MQTT topic design (shared broker)
