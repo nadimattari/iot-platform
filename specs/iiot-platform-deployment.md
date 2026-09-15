@@ -14,6 +14,11 @@ ingestion, dashboard), 5 infrastructure containers (db, redis, mqtt,
 chirpstack, chirpstack-rest-api, chirpstack-gateway-bridge) and the two
 networks that separate them:
 
+Redis is pinned to the **7.2.x** line (`redis:7.2-alpine`) — the last Redis
+release family under the open-source 3-Clause BSD licence. The floating `7.x`
+tag now resolves to 7.4 (Redis Source Available Licence v2 / SSPL v1), so the
+pin keeps the stack's dependencies open source.
+
 ```mermaid
 flowchart TB
     subgraph frontend["frontend network (bridge)"]

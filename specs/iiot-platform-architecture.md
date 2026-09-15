@@ -155,7 +155,7 @@ history in a Bolt DB so clients can resume via Last-Event-ID.
 | `ingestion` | Single Python process (asyncio) | `uvicorn app.main:app` — FastAPI on `:8000`; also owns the MQTT subscriber task, the Modbus poller task and the batch writer task |
 | `dashboard` | Static nginx serving the built SPA | SPA `try_files` fallback; assets cached `7d` immutable |
 | `db` | TimescaleDB 16 (PostgreSQL) | `docker-entrypoint` runs `db/init/*` scripts on first boot |
-| `redis` | Redis 7 | `redis-server` |
+| `redis` | Redis 7.2 — pinned (last 3-Clause BSD line) | `redis-server` |
 | `mqtt` | Mosquitto 2 | `/mosquitto/entrypoint.sh` seeds service accounts, watches the credential file and reloads the broker with `SIGHUP` |
 | `chirpstack` | ChirpStack v4 | Merges every TOML in `/etc/chirpstack`, gRPC/API on `:8080`, monitoring on `:8081` |
 | `chirpstack-gateway-bridge` | gateway-bridge v4 | UDP 1700 packet forwarder ↔ MQTT (`eu868/gateway/...`) |

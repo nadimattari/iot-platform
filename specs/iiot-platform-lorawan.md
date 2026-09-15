@@ -36,7 +36,8 @@ From `deploy/chirpstack/chirpstack.toml` and `region_eu868.toml`:
 - **Database**: the separate `chirpstack` database on the shared TimescaleDB
   instance (`postgres://$CHIRPSTACK_DB_USER:...@db:5432/chirpstack`). Owned by
   the `chirpstack` role (see [Security](iiot-platform-security.md)).
-- **Redis**: `redis://redis:6379/0` with prefix `chirpstack:`.
+- **Redis**: `redis://redis:6379/0` with prefix `chirpstack:` (Redis 7.2,
+  pinned to the last 3-Clause BSD release line).
 - **API**: gRPC-web on `0.0.0.0:8080` (web UI + REST facade), monitoring on
   `0.0.0.0:8081`, secured by `CHIRPSTACK_API_SECRET`.
 - **Integration**: MQTT only. Event topic

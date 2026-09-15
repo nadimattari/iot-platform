@@ -28,7 +28,7 @@ LoRaWAN gateways).
 | device-mgmt | FrankenPHP 1.x (PHP 8.3, worker mode)         | Device/provisioning/config REST API, reads TSDB aggregates                                                      |
 | ingestion   | Python 3.12 + FastAPI + asyncio               | MQTT subscribe, Modbus TCP poll, LoRaWAN (ChirpStack MQTT), HTTP ingest; normalize + write TSDB; publish events |
 | db          | PostgreSQL 16 + TimescaleDB                   | Relational (platform + ChirpStack schemas) + time-series                                                        |
-| redis       | Redis 7                                       | Required by ChirpStack; optional ingestion buffering                                                            |
+| redis       | Redis 7.2 (pinned — last 3-Clause BSD line)   | Required by ChirpStack; optional ingestion buffering                                                            |
 | mqtt        | Eclipse Mosquitto 2                           | MQTT bus shared by devices, ChirpStack, ingestion (ChirpStack-native, low footprint)                            |
 | chirpstack  | chirpstack/chirpstack:4.x (latest v4)         | LoRaWAN Network Server + Application Server (merged in v4)                                                      |
 | dashboard   | Vue 3 SPA + PrimeVue (built, served by Caddy) | Live device views, charts, insights                                                                             |

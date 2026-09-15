@@ -52,7 +52,7 @@ upgrade path.
 | Device-management consumers      | Symfony 7 (CLI)                 | Downlink / ACK event consumers (MQTT + ChirpStack)          |
 | Ingestion                        | Python 3.12 + FastAPI           | MQTT subscribe, Modbus TCP poll, LoRaWAN, HTTP → TimescaleDB|
 | Database                         | PostgreSQL 16 + TimescaleDB     | Relational + time-series                                    |
-| Redis                            | Redis 7                         | Required by ChirpStack                                      |
+| Redis                            | Redis 7.2 (last 3-Clause BSD line) | Required by ChirpStack                                    |
 | MQTT broker                      | Eclipse Mosquitto 2             | Shared device/ChirpStack bus                                |
 | LoRaWAN NS/AS                    | ChirpStack v4 (EU868)           | Network Server + Application Server                         |
 | Gateway bridge                   | ChirpStack gateway bridge v4    | UDP 1700 ⇄ MQTT for packet-forwarder gateways               |

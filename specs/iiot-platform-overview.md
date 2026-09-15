@@ -44,7 +44,7 @@ Two long-running consumers run alongside `device-mgmt` and share its code:
 | **TimescaleDB** (PostgreSQL 16) | Two databases: `iiot` (platform schemas: `auth`, `public`, `telemetry`) and `chirpstack`. The telemetry schema uses a hypertable plus `1m`/`1h`/`1d` continuous aggregates. |
 | **Mosquitto** | MQTT broker. Internal only — never published to the host. Holds device uplinks, downlinks, acks and the ChirpStack event bus. |
 | **Caddy + Mercure** | Single internet-facing entry point (ports 80/443). Reverse-proxies every route and hosts the Mercure SSE hub. |
-| **Redis** | Used by ChirpStack for caching/queues. |
+| **Redis** (7.2, pinned) | Used by ChirpStack for caching/queues. Pinned to the last open-source 3-Clause BSD line — newer 7.x images moved to the Redis Source Available Licence / SSPL. |
 | **ChirpStack v4** | LoRaWAN network server + application server. `chirpstack-gateway-bridge` connects real gateways (UDP 1700) to MQTT; `chirpstack-rest-api` exposes a REST facade over its gRPC API. |
 
 ## Key features
