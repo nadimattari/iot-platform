@@ -240,7 +240,11 @@ services:
       start_period: 15s
 
   redis:
-    image: redis:7-alpine
+    # Pinned to 7.2.x: the last Redis line under the open-source 3-Clause BSD
+    # licence. The 7.x floating tag moved to 7.4 (Redis Source Available
+    # Licence v2 / Server Side Public Licence v1). Redis 7.2 still satisfies
+    # ChirpStack v4 (minimum Redis 6.2) and its key/value API is unchanged.
+    image: redis:7.2-alpine
     restart: unless-stopped
     logging: *default-logging
     command: ["redis-server"]
