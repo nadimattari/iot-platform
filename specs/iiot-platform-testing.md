@@ -36,8 +36,8 @@ in-memory/short-lived Postgres supplied by the test setup.
 that adds:
 
 - `mock-modbus` — a raw Modbus TCP (FC03) server the ingestion poller reads;
-- `e2e` — the suite container (`tests/e2e/Dockerfile`), which also contains
-  `lorasim.py` for the LoRaWAN leg.
+- `e2e` — the suite container (`tests/e2e/Dockerfile`). Its LoRaWAN leg is a
+  fake-ChirpStack-AS driver (`tests/e2e/drivers/lorawan.py`), not lorasim.
 
 The suite drives one device per protocol and asserts the **full loop** for
 each: ingest → TimescaleDB → read API (`/last`, `/telemetry`) → Mercure SSE
@@ -74,7 +74,8 @@ tears the stack down with `down -v` in both cases.
 
 - No dedicated unit tests for the `dashboard` SPA (browser-level checks are
   only exercised through the e2e/SSE flow).
-- No load test: ingest throughput is bounded by the batch writer
-  (≤ 500 rows / 0.2 s) but no soak test enforces it.
+- No load test in CI: see
+  [Scalability and Load Testing](../docs/scalability-testing.md) for the
+  hardware-free procedure (lorasim / MQTT / HTTP / Modbus generators).
 - No explicit security regression tests (see
   [Security](iiot-platform-security.md#known-gaps-and-recommendations)).

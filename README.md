@@ -148,3 +148,6 @@ docker compose -p iiot-platform-e2e -f deploy/docker-compose.yml \
 
 This boots the whole stack in an isolated compose project with mock devices for
 all four protocols and exits 0 on success.
+
+For no-hardware scalability/load testing (SC5 query performance, ingestion
+throughput) see [`docs/scalability-testing.md`](docs/scalability-testing.md).

@@ -89,4 +89,18 @@ quarantined by ingestion.
 + gateway simulator: it publishes gateway frames on `eu868/gateway/<gw>/event/up`,
 performs a real JoinRequest/JoinAccept handshake, derives the session keys,
 encrypts FRMPayloads and publishes uplinks — exercising the exact same path a
-real gateway would. The e2e suite uses it to validate the LoRaWAN scenario.
+real gateway would. It is the tool for hardware-free join/uplink/downlink
+verification and for scalability testing (run one container per simulated
+device). Build the packaged image and run a single device like this:
+
+```bash
+docker build -t lorasim deploy/chirpstack/scripts/
+docker run --rm --network iiot-platform_backend --name lorasim \
+  lorasim --broker mqtt:1883 --username chirpstack --password change-me \
+  --dev-eui 70b3d5499e320001 --app-key 00000000000000000000000000000001 \
+  --gateway-id 0102030405060708 --uplinks 1
+```
+
+The device must exist in ChirpStack with a matching `AppKey` (create it in the
+ChirpStack UI at `http://localhost:8080`, admin/admin). For multi-device load,
+see [Scalability and Load Testing](../docs/scalability-testing.md).
