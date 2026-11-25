@@ -36,7 +36,7 @@ docs/         → Setup guides for different tools
 
 ## Contributing
 
-Before adding a new skill or significantly reworking an existing one, run the pre-flight checks in [CONTRIBUTING.md](CONTRIBUTING.md#before-proposing-a-new-skill): search the catalog, check open PRs, confirm the idea fits [docs/skill-anatomy.md](docs/skill-anatomy.md), and justify the gap. Prefer extending an existing skill over adding a near-duplicate. CONTRIBUTING.md is the single source of truth for this workflow; do not restate its checklist here or elsewhere, link to it.
+Before adding a new skill or significantly reworking an existing one, run the pre-flight checks in [AGENT-SKILLS-CONTRIBUTING.md](AGENT-SKILLS-CONTRIBUTING.md#before-proposing-a-new-skill): search the catalog, check open PRs, confirm the idea fits [docs/skill-anatomy.md](docs/skill-anatomy.md), and justify the gap. Prefer extending an existing skill over adding a near-duplicate. AGENT-SKILLS-CONTRIBUTING.md is the single source of truth for this workflow; do not restate its checklist here or elsewhere, link to it.
 
 ## Commands
 
@@ -53,7 +53,7 @@ PRs target the upstream repository's default branch. In a typical fork setup the
 
 ## Boundaries
 
-- Always: Run the CONTRIBUTING.md pre-flight checks before creating a new skill directory
+- Always: Run the AGENT-SKILLS-CONTRIBUTING.md pre-flight checks before creating a new skill directory
 - Always: Follow the skill-anatomy.md format for new skills
 - Always: Check the upstream repo's open PRs and issues for overlap before opening a new PR
 - Never: Add skills that are vague advice instead of actionable processes

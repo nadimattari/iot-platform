@@ -2,15 +2,17 @@
 
 This file provides guidance to AI coding agents (Claude Code, Cursor, Copilot, Antigravity, etc.) when working with code in this repository.
 
-> **Scope:** This file configures agents working on the [`addyosmani/agent-skills`](https://github.com/addyosmani/agent-skills) repository itself. It is not meant to be copied into other projects or into a global agent configuration; the reusable assets are the skills in `skills/`, not this file.
+> **Scope:** This file configures agents working in the [`iot-platform`](https://github.com/nadimattari/iot-platform) repository — a self-hosted, single-tenant industrial IoT platform. It applies the workflow rules of the vendored [`addyosmani/agent-skills`](https://github.com/addyosmani/agent-skills) plugin to this project. The reusable assets are `skills/`, `agents/`, and `.claude/commands/`; this file is project-specific guidance and is not part of the plugin catalog.
 
 ## Repository Overview
 
-A collection of skills for Claude.ai and Claude Code for senior software engineers. Skills are packaged instructions and scripts that extend Claude and your coding agents capabilities.
+A single-tenant, self-hosted IIoT platform that connects, monitors, and controls devices over MQTT, LoRaWAN, Modbus TCP, and HTTP/REST, with a Vue dashboard, TimescaleDB insights, and command/downlink control. Each customer deploys the stack on their own VPS with Docker Compose; there is no SaaS multi-tenancy.
+
+Application code lives in `services/` (auth, device management, ingestion, dashboard), deployment assets in `deploy/`, database schema in `db/`, the implementation plan in `specs/`, the E2E suite in `tests/`, and project documentation in `docs/`. The `AGENT-SKILLS-*` files at the repository root are the vendored upstream documentation; root `README.md` and `LICENSE` belong to this project.
 
 ## OpenCode Integration
 
-OpenCode uses a **skill-driven execution model** powered by the `skill` tool and this repository's `/skills` directory.
+OpenCode uses a **skill-driven execution model** powered by the `skill` tool and the vendored `skills/` directory (`.opencode/skills` links to it).
 
 ### Core Rules
 
@@ -70,7 +72,7 @@ This ensures OpenCode behaves similarly to Claude Code with full workflow enforc
 
 ## Orchestration: Personas, Skills, and Commands
 
-This repo has three composable layers. They have different jobs and should not be confused:
+The vendored plugin has three composable layers. They have different jobs and should not be confused:
 
 - **Skills** (`skills/<name>/SKILL.md`) — workflows with steps and exit criteria. The *how*. Mandatory hops when an intent matches.
 - **Personas** (`agents/<role>.md`) — roles with a perspective and an output format. The *who*.
@@ -86,8 +88,8 @@ See [docs/agents.md](docs/agents.md) for the decision matrix and [references/orc
 
 ## Creating a New Skill
 
-> **Before you start:** run the pre-flight checks in [CONTRIBUTING.md](CONTRIBUTING.md#before-proposing-a-new-skill), search the catalog, check open PRs (`gh pr list --state open`), confirm the idea fits [docs/skill-anatomy.md](docs/skill-anatomy.md), and justify the gap in your PR description. Most new-skill ideas overlap an existing skill or an open PR; prefer extending an existing skill over adding a near-duplicate. CONTRIBUTING.md is the single source of truth for this workflow.
+> **Before you start:** when adding a skill to the vendored catalog, run the pre-flight checks in [AGENT-SKILLS-CONTRIBUTING.md](AGENT-SKILLS-CONTRIBUTING.md#before-proposing-a-new-skill), search the catalog, check open PRs (`gh pr list --state open`), confirm the idea fits [docs/skill-anatomy.md](docs/skill-anatomy.md), and justify the gap in your PR description. Most new-skill ideas overlap an existing skill or an open PR; prefer extending an existing skill over adding a near-duplicate. AGENT-SKILLS-CONTRIBUTING.md is the single source of truth for this workflow.
 
-Skills in this repo are markdown-first: each lives at `skills/<kebab-case-name>/SKILL.md` with YAML frontmatter (`name`, `description`) and follows the section anatomy (Overview, When to Use, Process, Common Rationalizations, Red Flags, Verification). Add a `scripts/` directory only when the skill ships runnable helpers; most skills are markdown only, and there are no per-skill zip packages.
+Vendored skills are markdown-first: each lives at `skills/<kebab-case-name>/SKILL.md` with YAML frontmatter (`name`, `description`) and follows the section anatomy (Overview, When to Use, Process, Common Rationalizations, Red Flags, Verification). Add a `scripts/` directory only when the skill ships runnable helpers; most skills are markdown only, and there are no per-skill zip packages.
 
 For the full format, naming conventions, frontmatter rules, supporting-file thresholds, and writing principles, see [docs/skill-anatomy.md](docs/skill-anatomy.md), the single source of truth for skill structure. Do not restate that guidance here, link to it.
