@@ -13,6 +13,8 @@ __pycache__/
 .pytest_cache/
 .claude/.simplify-ignore-cache/
 .claude/sdd-cache/
+evals/results/
+evals/plugin/results/
 
 # IDE
 .idea/

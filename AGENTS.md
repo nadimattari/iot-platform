@@ -1,110 +1,93 @@
 # AGENTS.md
 
-This file provides guidance to AI coding agents when working in this repository.
+This file provides guidance to AI coding agents (Claude Code, Cursor, Copilot, Antigravity, etc.) when working with code in this repository.
 
-## What This Repo Is
+> **Scope:** This file configures agents working on the [`addyosmani/agent-skills`](https://github.com/addyosmani/agent-skills) repository itself. It is not meant to be copied into other projects or into a global agent configuration; the reusable assets are the skills in `skills/`, not this file.
 
-This is [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) — a collection of production-grade skill files (structured Markdown workflows) for AI coding agents. **There is no application code.** This is a documentation/plugin repo distributed via the Claude Code plugin marketplace.
+## Repository Overview
 
-## Project Structure
+A collection of skills for Claude.ai and Claude Code for senior software engineers. Skills are packaged instructions and scripts that extend Claude and your coding agents capabilities.
 
-```
-skills/          → 23 skills (22 lifecycle + 1 meta), each with SKILL.md
-agents/          → 3 specialist personas (code-reviewer, security-auditor, test-engineer)
-.claude/commands/ → 7 slash commands (/spec, /plan, /build, /test, /review, /code-simplify, /ship)
-references/      → 4 supplementary checklists
-docs/            → Setup guides per tool
-.hooks/          → Session lifecycle hooks
-.opencode/       → OpenCode plugin wrapper (package.json for @opencode-ai/plugin)
-.claude-plugin/  → Claude Code plugin manifests
-scripts/         → CI validation scripts
-```
+## OpenCode Integration
 
-## Mandatory: Skill-Driven Execution
+OpenCode uses a **skill-driven execution model** powered by the `skill` tool and this repository's `/skills` directory.
 
-OpenCode uses a **skill-driven execution model**. For every request:
+### Core Rules
 
-1. If a skill applies (even 1% chance), invoke it via the `skill` tool
-2. Follow the skill workflow exactly — do not partially apply
-3. Only proceed to implementation after required steps (spec, plan, etc.) are complete
+- If a task matches a skill, you MUST invoke it
+- Skills are located in `skills/<skill-name>/SKILL.md`
+- Never implement directly if a skill applies
+- Always follow the skill instructions exactly (do not partially apply them)
 
-**Intent → Skill mapping:**
+### Intent → Skill Mapping
 
-| Intent | Skill(s) |
-|--------|----------|
-| Feature / new functionality | `spec-driven-development` → `incremental-implementation` → `test-driven-development` |
-| Planning / breakdown | `planning-and-task-breakdown` |
-| Bug / failure | `debugging-and-error-recovery` |
-| Code review | `code-review-and-quality` |
-| Refactoring | `code-simplification` |
-| API design | `api-and-interface-design` |
-| UI work | `frontend-ui-engineering` |
+The agent should automatically map user intent to skills:
 
-**Anti-rationalization:** "This is too small for a skill" and "I'll gather context first" are wrong. Always check skills first.
+- Feature / new functionality → `spec-driven-development`, then `incremental-implementation`, `test-driven-development`
+- Planning / breakdown → `planning-and-task-breakdown`
+- Bug / failure / unexpected behavior → `debugging-and-error-recovery`
+- Code review → `code-review-and-quality`
+- Refactoring / simplification → `code-simplification`
+- API or interface design → `api-and-interface-design`
+- UI work → `frontend-ui-engineering`
+- Accessibility audit / a11y review → `accessibility-engineering`
 
-## Lifecycle
+### Lifecycle Mapping (Implicit Commands)
 
-OpenCode has no slash commands like `/spec` or `/plan`. Agents follow this lifecycle internally:
+OpenCode does not support slash commands like `/spec` or `/plan`.
 
-DEFINE → `spec-driven-development` → PLAN → `planning-and-task-breakdown` → BUILD → `incremental-implementation` + `test-driven-development` → VERIFY → `debugging-and-error-recovery` → REVIEW → `code-review-and-quality` → SHIP → `shipping-and-launch`
+Instead, the agent must internally follow this lifecycle:
 
-## Orchestration Rules
+- DEFINE → `spec-driven-development`
+- PLAN → `planning-and-task-breakdown`
+- BUILD → `incremental-implementation` + `test-driven-development`
+- VERIFY → `debugging-and-error-recovery`
+- REVIEW → `code-review-and-quality`
+- SHIP → `shipping-and-launch`
 
-- **Skills** = the *how* (workflows with steps and exit criteria)
-- **Personas** = the *who* (roles with perspectives and output formats)
-- **Commands** = the *when* (user-facing entry points)
+### Execution Model
 
-**Composition rule:** The user (or a slash command) is the orchestrator. **Personas do not invoke other personas.** A persona may invoke skills.
+For every request:
 
-The only multi-persona pattern endorsed is **parallel fan-out with merge**: `/ship` runs `code-reviewer` + `security-auditor` + `test-engineer` concurrently, then synthesizes. Do not build a "router" persona.
+1. Determine if any skill applies (even 1% chance)
+2. Invoke the appropriate skill using the `skill` tool
+3. Follow the skill workflow strictly
+4. Only proceed to implementation after required steps (spec, plan, etc.) are complete
 
-**Claude Code interop:** Plugin agents silently ignore `hooks`, `mcpServers`, and `permissionMode` frontmatter fields. Subagents cannot spawn other subagents; teams cannot nest.
+### Anti-Rationalization
 
-See `agents/README.md` for the decision matrix and `references/orchestration-patterns.md` for the full catalog.
+The following thoughts are incorrect and must be ignored:
+
+- "This is too small for a skill"
+- "I can just quickly implement this"
+- "I’ll gather context first"
+
+Correct behavior:
+
+- Always check for and use skills first
+
+This ensures OpenCode behaves similarly to Claude Code with full workflow enforcement.
+
+## Orchestration: Personas, Skills, and Commands
+
+This repo has three composable layers. They have different jobs and should not be confused:
+
+- **Skills** (`skills/<name>/SKILL.md`) — workflows with steps and exit criteria. The *how*. Mandatory hops when an intent matches.
+- **Personas** (`agents/<role>.md`) — roles with a perspective and an output format. The *who*.
+- **Slash commands** (`.claude/commands/*.md`) — user-facing entry points. The *when*. The orchestration layer.
+
+Composition rule: **the user (or a slash command) is the orchestrator. Personas do not invoke other personas.** A persona may invoke skills.
+
+The only multi-persona orchestration pattern this repo endorses is **parallel fan-out with a merge step** — used by `/ship` to run `code-reviewer`, `security-auditor`, and `test-engineer` concurrently and synthesize their reports. Do not build a "router" persona that decides which other persona to call; that's the job of slash commands and intent mapping.
+
+See [docs/agents.md](docs/agents.md) for the decision matrix and [references/orchestration-patterns.md](references/orchestration-patterns.md) for the full pattern catalog.
+
+**Claude Code interop:** the personas in `agents/` work as Claude Code subagents (auto-discovered from this plugin's `agents/` directory) and as Agent Teams teammates (referenced by name when spawning). Two platform constraints align with our rules: subagents cannot spawn other subagents, and teams cannot nest. Plugin agents silently ignore the `hooks`, `mcpServers`, and `permissionMode` frontmatter fields.
 
 ## Creating a New Skill
 
-### Directory Structure
+> **Before you start:** run the pre-flight checks in [CONTRIBUTING.md](CONTRIBUTING.md#before-proposing-a-new-skill), search the catalog, check open PRs (`gh pr list --state open`), confirm the idea fits [docs/skill-anatomy.md](docs/skill-anatomy.md), and justify the gap in your PR description. Most new-skill ideas overlap an existing skill or an open PR; prefer extending an existing skill over adding a near-duplicate. CONTRIBUTING.md is the single source of truth for this workflow.
 
-```
-skills/{skill-name}/           # kebab-case
-  SKILL.md                     # Required: skill definition
-  scripts/{script-name}.sh     # Optional: executable bash scripts
-skills/{skill-name}.zip        # Required: packaged for distribution
-```
+Skills in this repo are markdown-first: each lives at `skills/<kebab-case-name>/SKILL.md` with YAML frontmatter (`name`, `description`) and follows the section anatomy (Overview, When to Use, Process, Common Rationalizations, Red Flags, Verification). Add a `scripts/` directory only when the skill ships runnable helpers; most skills are markdown only, and there are no per-skill zip packages.
 
-### Conventions
-
-- SKILL.md must have YAML frontmatter with `name` and `description`
-- Description starts with what the skill does (third person), then "Use when..." trigger conditions
-- Standard sections: Overview, When to Use, Process, Common Rationalizations, Red Flags, Verification
-- Keep SKILL.md under 500 lines; put detailed reference in separate files
-- References belong in `references/`, not inside skill directories
-- Never duplicate content between skills — reference instead
-
-### Script Requirements
-
-- `#!/bin/bash` shebang, `set -e` for fail-fast
-- Status messages to stderr, machine-readable output (JSON) to stdout
-- Include a cleanup trap for temp files
-- Path reference: `/mnt/skills/user/{skill-name}/scripts/{script}.sh`
-
-### Packaging
-
-After creating or updating a skill:
-
-```bash
-cd skills && zip -r {skill-name}.zip {skill-name}/
-```
-
-## CI / Validation
-
-- `node scripts/validate-skills.js` — validates all SKILL.md files have correct YAML frontmatter (name + description)
-- `claude plugin validate .` — validates plugin structure (requires `@anthropic-ai/claude-code` installed)
-- CI runs on push/PR: validate skills → validate plugin → test marketplace install
-
-## Code Style
-
-- No generic software advice, tutorials, or obvious conventions in this file
-- When in doubt, prefer short sections and bullets
-- Preserve only guidance an agent would otherwise miss
+For the full format, naming conventions, frontmatter rules, supporting-file thresholds, and writing principles, see [docs/skill-anatomy.md](docs/skill-anatomy.md), the single source of truth for skill structure. Do not restate that guidance here, link to it.
